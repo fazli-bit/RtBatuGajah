@@ -54,19 +54,18 @@
 
 <div id="counter-container">
     <div id="title">Jumlah Borang Diterima</div>
-    <div id="count">...</div>
-    <div id="last-updated">Mengemas kini...</div>
+    <div id="count">Memuatkan...</div>
+    <div id="last-updated">Sila tunggu...</div>
 </div>
 
 <script>
     // --- KONFIGURASI ---
-    // URL Aplikasi Web dari Google Apps Script anda telah dimasukkan di bawah.
+    // URL Aplikasi Web dari Google Apps Script anda.
     const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjFfsTQXcgZHoq7Uo_iDfnqpJWPezbI4LirY56HIGW1xGRtoky_St-EUm9LVu0hwPfEg/exec";
 
     const countElement = document.getElementById('count');
     const lastUpdatedElement = document.getElementById('last-updated');
 
-    // Fungsi untuk mendapatkan jumlah borang dari Google Script menggunakan proksi untuk mengelak ralat CORS
     async function fetchSubmissionCount() {
         if (!G_SCRIPT_URL) {
             countElement.innerText = "N/A";
@@ -76,30 +75,37 @@
         
         // Menggunakan proksi CORS awam untuk memintas sekatan rangkaian
         const proxyUrl = 'https://api.allorigins.win/raw?url=';
-        // Tambah parameter rawak untuk elak 'caching' oleh Google
+        // Tambah parameter rawak untuk elak 'caching'
         const targetUrl = `${G_SCRIPT_URL}?t=${new Date().getTime()}`;
         const fetchUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
 
         try {
-            const response = await fetch(fetchUrl);
+            const response = await fetch(fetchUrl, { cache: 'no-store' }); // Menambah opsyen untuk elak caching
             if (!response.ok) {
-                throw new Error(`Ralat rangkaian: ${response.statusText}`);
+                throw new Error(`Rangkaian tidak stabil: ${response.statusText}`);
             }
             
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                countElement.innerText = data.count;
-                const now = new Date();
-                lastUpdatedElement.innerText = `Dikemas kini pada: ${now.toLocaleTimeString('ms-MY')}`;
-            } else {
-                countElement.innerText = "Ralat";
-                lastUpdatedElement.innerText = "Gagal memuatkan data.";
+            const responseText = await response.text();
+            
+            try {
+                const data = JSON.parse(responseText);
+                if (data && data.status === 'success') {
+                    countElement.innerText = data.count;
+                    const now = new Date();
+                    lastUpdatedElement.innerText = `Dikemas kini pada: ${now.toLocaleTimeString('ms-MY')}`;
+                } else {
+                    throw new Error("Respons pelayan tidak berjaya.");
+                }
+            } catch (parseError) {
+                console.error("Gagal memproses data:", responseText);
+                countElement.innerText = "--";
+                lastUpdatedElement.innerText = "Format data dari pelayan tidak sah.";
             }
+
         } catch (error) {
             console.error("Gagal mendapatkan jumlah borang:", error);
-            countElement.innerText = "Ralat";
-            lastUpdatedElement.innerText = "Tidak dapat sambung ke pelayan.";
+            countElement.innerText = "--";
+            lastUpdatedElement.innerText = "Gagal menyambung ke pelayan.";
         }
     }
 
@@ -107,10 +113,9 @@
     // Panggil fungsi sekali di awal untuk paparan segera
     fetchSubmissionCount();
 
-    // Tetapkan selang masa untuk mengemas kini data setiap 30 saat
-    setInterval(fetchSubmissionCount, 30000); 
+    // Tetapkan selang masa untuk mengemas kini data setiap 1 minit (60000 milisaat)
+    setInterval(fetchSubmissionCount, 60000); 
 </script>
 
 </body>
 </html>
-
