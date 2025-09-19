@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jumlah Borang Diterima</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            background-color: #1a222a; /* Latar belakang lebih gelap */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Poppins', sans-serif;
+            color: #e0e0e0;
+        }
+
+        #counter-container {
+            text-align: center;
+            background-color: #2c3e50;
+            padding: 3rem 4rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            min-width: 300px;
+        }
+
+        #title {
+            font-size: 1.2rem;
+            font-weight: 400;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #bdc3c7;
+        }
+
+        #count {
+            font-size: 6rem;
+            font-weight: 700;
+            line-height: 1.1;
+            color: #ffffff;
+            margin-bottom: 1.5rem;
+        }
+        
+        #last-updated {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+
+<div id="counter-container">
+    <div id="title">Jumlah Borang Diterima</div>
+    <div id="count">...</div>
+    <div id="last-updated">Mengemas kini...</div>
+</div>
+
+<script>
+    // --- KONFIGURASI ---
+    // URL Aplikasi Web dari Google Apps Script anda telah dimasukkan di bawah.
+    const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjFfsTQXcgZHoq7Uo_iDfnqpJWPezbI4LirY56HIGW1xGRtoky_St-EUm9LVu0hwPfEg/exec";
+
+    const countElement = document.getElementById('count');
+    const lastUpdatedElement = document.getElementById('last-updated');
+
+    // Fungsi untuk mendapatkan jumlah borang dari Google Script menggunakan proksi untuk mengelak ralat CORS
+    async function fetchSubmissionCount() {
+        if (!G_SCRIPT_URL) {
+            countElement.innerText = "N/A";
+            lastUpdatedElement.innerText = "Sila tetapkan URL skrip";
+            return;
+        }
+        
+        // Menggunakan proksi CORS awam untuk memintas sekatan rangkaian
+        const proxyUrl = 'https://api.allorigins.win/raw?url=';
+        // Tambah parameter rawak untuk elak 'caching' oleh Google
+        const targetUrl = `${G_SCRIPT_URL}?t=${new Date().getTime()}`;
+        const fetchUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
+
+        try {
+            const response = await fetch(fetchUrl);
+            if (!response.ok) {
+                throw new Error(`Ralat rangkaian: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                countElement.innerText = data.count;
+                const now = new Date();
+                lastUpdatedElement.innerText = `Dikemas kini pada: ${now.toLocaleTimeString('ms-MY')}`;
+            } else {
+                countElement.innerText = "Ralat";
+                lastUpdatedElement.innerText = "Gagal memuatkan data.";
+            }
+        } catch (error) {
+            console.error("Gagal mendapatkan jumlah borang:", error);
+            countElement.innerText = "Ralat";
+            lastUpdatedElement.innerText = "Tidak dapat sambung ke pelayan.";
+        }
+    }
+
+
+    // Panggil fungsi sekali di awal untuk paparan segera
+    fetchSubmissionCount();
+
+    // Tetapkan selang masa untuk mengemas kini data setiap 30 saat
+    setInterval(fetchSubmissionCount, 30000); 
+</script>
+
+</body>
+</html>
+
