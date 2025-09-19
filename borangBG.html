@@ -19,12 +19,29 @@
         }
 
         #counter-container {
+            position: relative; /* Diperlukan untuk meletakkan ikon */
             text-align: center;
             background-color: #023f33; /* Warna tema utama */
             padding: 3rem 4rem;
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
             min-width: 300px;
+        }
+
+        #manual-update-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            opacity: 0.7;
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+
+        #manual-update-btn:hover {
+            opacity: 1;
+            transform: rotate(90deg);
         }
 
         #title {
@@ -53,6 +70,12 @@
 <body>
 
 <div id="counter-container">
+    <div id="manual-update-btn" title="Muat semula">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+            <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+        </svg>
+    </div>
+
     <div id="title">Jumlah Borang Diterima</div>
     <div id="count">Memuatkan...</div>
     <div id="last-updated">Sila tunggu...</div>
@@ -65,22 +88,22 @@
 
     const countElement = document.getElementById('count');
     const lastUpdatedElement = document.getElementById('last-updated');
+    const updateBtn = document.getElementById('manual-update-btn');
 
     async function fetchSubmissionCount() {
+        lastUpdatedElement.innerText = "Mengemas kini...";
         if (!G_SCRIPT_URL) {
             countElement.innerText = "N/A";
             lastUpdatedElement.innerText = "Sila tetapkan URL skrip";
             return;
         }
         
-        // Menggunakan proksi CORS awam untuk memintas sekatan rangkaian
         const proxyUrl = 'https://api.allorigins.win/raw?url=';
-        // Tambah parameter rawak untuk elak 'caching'
         const targetUrl = `${G_SCRIPT_URL}?t=${new Date().getTime()}`;
         const fetchUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
 
         try {
-            const response = await fetch(fetchUrl, { cache: 'no-store' }); // Menambah opsyen untuk elak caching
+            const response = await fetch(fetchUrl, { cache: 'no-store' });
             if (!response.ok) {
                 throw new Error(`Rangkaian tidak stabil: ${response.statusText}`);
             }
@@ -109,6 +132,8 @@
         }
     }
 
+    // Tambah event listener untuk butang muat semula manual
+    updateBtn.addEventListener('click', fetchSubmissionCount);
 
     // Panggil fungsi sekali di awal untuk paparan segera
     fetchSubmissionCount();
@@ -119,3 +144,4 @@
 
 </body>
 </html>
+
