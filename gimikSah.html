@@ -180,7 +180,7 @@
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            /* background: #000; */ /* Dibuang sementara untuk ujian */
+            background: #000;
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -201,6 +201,9 @@
         .success-content {
              position: relative;
              z-index: 1;
+        }
+        #success-screen h1, #success-screen p {
+            opacity: 0; /* Mula dengan teks tersembunyi */
         }
         #success-screen h1 {
             font-size: 2.5rem;
@@ -327,7 +330,7 @@
     let handDetector = null;
     let handVerificationTimer = null;
     let lockedOnDescriptor = null;
-    let matrixInterval = null;
+    let matrixAnimationId = null;
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
