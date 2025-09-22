@@ -18,6 +18,7 @@
             --secondary-color: #6c757d;
             --success-color: #28a745;
             --danger-color: #dc3545;
+            --warning-color: #ffc107;
             --bg-color: #f0f2f5;
             --text-color: #212529;
             --matrix-green: #39FF14;
@@ -136,6 +137,7 @@
             justify-content: center;
             align-items: center;
             gap: 1rem;
+            flex-wrap: wrap;
         }
         .btn {
             padding: 0.75rem 1.5rem;
@@ -178,8 +180,8 @@
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: #000;
-            display: none; /* Initially hidden */
+            /* background: #000; */ /* Dibuang sementara untuk ujian */
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
@@ -189,6 +191,16 @@
             text-align: center;
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
+        }
+        #matrix-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+        }
+        .success-content {
+             position: relative;
+             z-index: 1;
         }
         #success-screen h1 {
             font-size: 2.5rem;
@@ -201,6 +213,7 @@
         #reset-btn {
             position: absolute;
             bottom: 2rem;
+            z-index: 1;
             background-color: var(--secondary-color);
             padding: 0.5rem 1rem;
             font-size: 0.9rem;
@@ -234,6 +247,7 @@
         <div id="main-menu" class="btn-group">
             <button id="register-btn" class="btn">Daftar Pengguna</button>
             <button id="recognize-btn" class="btn">Mula Pengesanan</button>
+            <button id="debug-success-btn" class="btn" style="background-color: var(--warning-color); color: var(--text-color);">Uji Skrin Berjaya</button>
         </div>
         <div id="registration-choice">
              <div class="btn-group">
@@ -267,8 +281,11 @@
         <div id="version-info">versi 0.1</div>
     </div>
     <div id="success-screen">
-        <h1>PENGESAHAN BERJAYA</h1>
-        <p>Pelancaran Telah Disempurnakan</p>
+        <canvas id="matrix-canvas"></canvas>
+        <div class="success-content">
+            <h1 id="success-title"></h1>
+            <p id="success-subtitle"></p>
+        </div>
         <button id="reset-btn" class="btn">Kembali ke Menu Utama</button>
     </div>
 </div>
@@ -295,7 +312,11 @@
     const handGuideBox = document.getElementById('hand-guide-box');
     const handGuideText = document.getElementById('hand-guide-text');
     const successScreen = document.getElementById('success-screen');
+    const successTitle = document.getElementById('success-title');
+    const successSubtitle = document.getElementById('success-subtitle');
     const resetBtn = document.getElementById('reset-btn');
+    const matrixCanvas = document.getElementById('matrix-canvas');
+    const debugSuccessBtn = document.getElementById('debug-success-btn');
 
     let stream = null;
     let detectionInterval = null;
@@ -305,7 +326,8 @@
     let firstMatchTime = null;
     let handDetector = null;
     let handVerificationTimer = null;
-    let isIdLocked = false;
+    let lockedOnDescriptor = null;
+    let matrixInterval = null;
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
@@ -393,11 +415,15 @@
         context.shadowBlur = 0;
     }
     
-    function drawMatrixInfo(context, box, name, position) {
-        const textLines = [ `• NAMA: ${name.toUpperCase()}`, `• JAWATAN: ${position.toUpperCase()}` ];
+    function drawMatrixInfo(context, box, name, position, score) {
+        const textLines = [
+            `• NAMA: ${name.toUpperCase()}`,
+            `• JAWATAN: ${position.toUpperCase()}`,
+            `• KEYAKINAN: ${score.toFixed(2)}`
+        ];
         context.font = '20px VT323, monospace';
-        const textWidth = Math.max(context.measureText(textLines[0]).width, context.measureText(textLines[1]).width);
-        const textHeight = 55;
+        const textWidth = Math.max(...textLines.map(line => context.measureText(line).width));
+        const textHeight = 80;
         let startX = box.x + 5;
         let startY;
 
@@ -410,6 +436,7 @@
         context.fillRect(startX, startY - 20, textWidth + 20, textHeight);
         drawMatrixText(context, textLines[0], startX + 10, startY, 20);
         drawMatrixText(context, textLines[1], startX + 10, startY + 25, 20);
+        drawMatrixText(context, textLines[2], startX + 10, startY + 50, 20);
     }
     
     function showSuccessScreen() {
@@ -418,7 +445,15 @@
         recognitionControls.style.display = 'none';
         handGuideBox.style.display = 'none';
         successScreen.style.display = 'flex';
-        setTimeout(() => successScreen.style.opacity = 1, 10);
+        setTimeout(() => {
+            successScreen.style.opacity = 1;
+            startMatrixAnimation();
+            setTimeout(() => {
+                decodeTextEffect('PENGESAHAN BERJAYA', successTitle, () => {
+                    decodeTextEffect('Pelancaran Telah Disempurnakan', successSubtitle, null);
+                });
+            }, 500);
+        }, 10);
     }
 
     function startRecognition() {
@@ -429,14 +464,14 @@
             mainMenu.style.display = 'none';
             recognitionControls.style.display = 'flex';
             firstMatchTime = null;
-            isIdLocked = false;
+            lockedOnDescriptor = null;
 
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(overlayCanvas, displaySize);
 
             detectionInterval = setInterval(async () => {
                 const [faceDetections, hands] = await Promise.all([
-                    faceapi.detectAllFaces(video).withFaceLandmarks().withFaceDescriptors(),
+                    faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors(),
                     handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
                 ]);
                 
@@ -455,12 +490,11 @@
                     }
                 }
 
-                if (isIdLocked && recognizedFaceResult) {
+                if (lockedOnDescriptor && recognizedFaceResult) {
                     // --- ID LOCKED STATE ---
-                    const box = recognizedFaceResult.detection.box;
-                    const flippedBox = { x: overlayCanvas.width - box.x - box.width, y: box.y, width: box.width, height: box.height };
+                    const { flippedBox } = processDetection(recognizedFaceResult);
                     new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
-                    drawMatrixInfo(context, flippedBox, registeredUser.name, registeredUser.position);
+                    drawMatrixInfo(context, flippedBox, registeredUser.name, registeredUser.position, recognizedFaceResult.detection.score);
 
                     // Hand guide logic
                     handGuideBox.style.display = 'flex';
@@ -500,35 +534,48 @@
 
                 } else {
                     // --- SCANNING STATE ---
-                    isIdLocked = false;
+                    lockedOnDescriptor = null;
                     handGuideBox.style.display = 'none';
                     if (resizedDetections.length > 0) {
                         resizedDetections.forEach(detection => {
-                            const box = detection.detection.box;
-                            const flippedBox = { x: overlayCanvas.width - box.x - box.width, y: box.y, width: box.width, height: box.height };
-                            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-
+                            const { flippedBox, bestMatch, score } = processDetection(detection);
+                            
                             if (bestMatch.label !== 'unknown') {
                                 if (firstMatchTime === null) firstMatchTime = Date.now();
                                 new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
                                 if (Date.now() - firstMatchTime < 1000) {
                                     drawMatrixText(context, "ID DISAHKAN...", flippedBox.x + flippedBox.width / 2 - 80, flippedBox.y + flippedBox.height / 2);
                                 } else {
-                                    isIdLocked = true; // Lock on
+                                    lockedOnDescriptor = detection.descriptor; // Lock on
                                 }
                             } else {
-                                new faceapi.draw.DrawBox(flippedBox, { label: 'TIADA AKSES', boxColor: 'rgba(220, 53, 69, 0.7)' }).draw(overlayCanvas);
+                                new faceapi.draw.DrawBox(flippedBox, { label: `TIADA AKSES (${score.toFixed(2)})`, boxColor: 'rgba(220, 53, 69, 0.7)' }).draw(overlayCanvas);
                             }
                         });
-                    } else {
+                    }
+                    if (resizedDetections.length === 0) {
                          drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2 - 150, overlayCanvas.height / 2);
                     }
-                     if (!recognizedFaceResult) firstMatchTime = null;
                 }
-
             }, 100);
         });
     }
+
+    const processDetection = (detection) => {
+        const box = detection.detection.box;
+        const paddingX = box.width * 0.3;
+        const paddingY = box.height * 0.7;
+        const paddedBox = {
+            x: box.x - paddingX / 2,
+            y: box.y - paddingY * 0.6,
+            width: box.width + paddingX,
+            height: box.height + paddingY
+        };
+        const flippedBox = { x: overlayCanvas.width - paddedBox.x - paddedBox.width, y: paddedBox.y, width: paddedBox.width, height: paddedBox.height };
+        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+        const score = detection.detection.score;
+        return { flippedBox, bestMatch, score };
+    };
     
     function startRegistrationGuide() {
         clearAllIntervals();
@@ -627,9 +674,68 @@
         }
         reader.readAsDataURL(file);
     }
+    
+    function decodeTextEffect(finalText, element, callback) {
+        let i = 0;
+        const alphabet = 'アァカサタナハマヤャラワABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*&%$#@!';
+        element.style.opacity = 1;
+        element.textContent = '';
+
+        const decodingInterval = setInterval(() => {
+            if (i >= finalText.length) {
+                clearInterval(decodingInterval);
+                if (callback) callback();
+                return;
+            }
+
+            let currentText = finalText.substring(0, i + 1);
+            for (let j = i + 1; j < finalText.length; j++) {
+                currentText += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+            }
+
+            element.textContent = currentText;
+            i++;
+        }, 80);
+    }
+
+    function startMatrixAnimation() {
+        const context = matrixCanvas.getContext('2d');
+        matrixCanvas.width = matrixCanvas.clientWidth;
+        matrixCanvas.height = matrixCanvas.clientHeight;
+
+        const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+        const alphabet = katakana + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const fontSize = 16;
+        const columns = matrixCanvas.width / fontSize;
+        const rainDrops = Array.from({ length: Math.ceil(columns) }).fill(1);
+
+        const draw = () => {
+            context.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            context.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+            context.fillStyle = 'var(--matrix-green)';
+            context.font = `${fontSize}px VT323, monospace`;
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                context.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+                if (rainDrops[i] * fontSize > matrixCanvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i]++;
+            }
+        };
+        if (matrixInterval) clearInterval(matrixInterval);
+        matrixInterval = setInterval(draw, 33);
+    }
+
+    function stopMatrixAnimation() {
+        if(matrixInterval) clearInterval(matrixInterval);
+        matrixInterval = null;
+    }
+
 
     function handleCancel() {
         clearAllIntervals();
+        stopMatrixAnimation();
         registrationForm.style.display = 'none';
         registrationChoice.style.display = 'none';
         recognitionControls.style.display = 'none';
@@ -641,6 +747,8 @@
         stopCamera();
         setPlaceholderContent(initialPlaceholderContent);
         checkRegisteredUser(); 
+        successTitle.textContent = '';
+        successSubtitle.textContent = '';
     }
 
     registerBtn.addEventListener('click', () => {
@@ -657,6 +765,7 @@
     cancelFormBtn.addEventListener('click', handleCancel);
     backBtn.addEventListener('click', handleCancel);
     resetBtn.addEventListener('click', handleCancel);
+    debugSuccessBtn.addEventListener('click', showSuccessScreen);
 
     registrationForm.addEventListener('submit', async (e) => {
         e.preventDefault();
