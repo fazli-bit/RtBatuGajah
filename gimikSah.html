@@ -25,22 +25,19 @@
         }
         body {
             margin: 0;
-            background-color: var(--bg-color);
+            background-color: #000;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             font-family: 'Poppins', sans-serif;
             color: var(--text-color);
-            padding: 1rem;
             box-sizing: border-box;
         }
         #app-container {
-            width: 100%;
-            max-width: 640px;
+            width: 100vw;
+            height: 100vh;
             background-color: white;
-            border-radius: var(--border-radius);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -50,7 +47,7 @@
             position: relative;
             background-color: #000;
             width: 100%;
-            height: 340px; /* Saiz kotak ditetapkan */
+            flex-grow: 1; /* Let it fill available vertical space */
             overflow: hidden; /* Memastikan tiada apa yang terkeluar */
         }
         #video {
@@ -542,21 +539,21 @@
                     faceapi.matchDimensions(overlayCanvas, displaySize);
                 }
                 context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-                const centerX = overlayCanvas.width / 2;
-                const centerY = overlayCanvas.height / 2;
-                const radiusX = overlayCanvas.width * 0.15; 
-                const radiusY = overlayCanvas.height * 0.3;
-                context.beginPath();
-                context.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                const rectWidth = overlayCanvas.width * 0.4;
+                const rectHeight = overlayCanvas.height * 0.7;
+                const rectX = (overlayCanvas.width - rectWidth) / 2;
+                const rectY = (overlayCanvas.height - rectHeight) / 2;
+                
                 context.strokeStyle = 'rgba(255, 255, 255, 0.9)';
                 context.lineWidth = 4;
                 context.setLineDash([15, 10]);
-                context.stroke();
+                context.strokeRect(rectX, rectY, rectWidth, rectHeight);
+                
                 context.font = 'bold 16px Poppins';
                 context.fillStyle = 'rgba(255, 255, 255, 0.9)';
                 context.textAlign = 'center';
-                context.fillText('Letakkan wajah anda disini', centerX, centerY - radiusY - 35);
-                context.fillText('dan pandang tepat ke kamera', centerX, centerY - radiusY - 15);
+                context.fillText('Letakkan wajah anda disini', overlayCanvas.width / 2, rectY - 35);
+                context.fillText('dan pandang tepat ke kamera', overlayCanvas.width / 2, rectY - 15);
             };
             guideInterval = setInterval(drawStaticGuide, 100);
         });
