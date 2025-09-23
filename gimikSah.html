@@ -181,7 +181,7 @@
             top: 0; left: 0;
             width: 100%; height: 100%;
             background: #000;
-            display: none; /* Initially hidden */
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
@@ -203,7 +203,7 @@
              z-index: 1;
         }
         #success-screen h1, #success-screen p {
-            opacity: 0; /* Mula dengan teks tersembunyi */
+            opacity: 0; /* Keep text hidden for now */
         }
         #success-screen h1 {
             font-size: 2.5rem;
@@ -330,7 +330,7 @@
     let handDetector = null;
     let handVerificationTimer = null;
     let lockedOnDescriptor = null;
-    let matrixInterval = null;
+    let matrixAnimationId = null;
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
@@ -451,11 +451,6 @@
         setTimeout(() => {
             successScreen.style.opacity = 1;
             startMatrixAnimation();
-            setTimeout(() => {
-                decodeTextEffect('PENGESAHAN BERJAYA', successTitle, () => {
-                    decodeTextEffect('Pelancaran Telah Disempurnakan', successSubtitle, null);
-                });
-            }, 500);
         }, 10);
     }
 
@@ -701,11 +696,10 @@
         }, 80);
     }
     
-    let matrixAnimationId;
     function startMatrixAnimation() {
         const context = matrixCanvas.getContext('2d');
-        matrixCanvas.width = matrixCanvas.clientWidth;
-        matrixCanvas.height = matrixCanvas.clientHeight;
+        matrixCanvas.width = window.innerWidth;
+        matrixCanvas.height = window.innerHeight;
 
         const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
         const alphabet = katakana + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
