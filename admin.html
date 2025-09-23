@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Pentadbir - Pengecaman Wajah</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@latest/dist/face-api.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --border-radius: 8px;
+        }
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-color);
+        }
+        #app-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .content {
+            padding: 2rem;
+        }
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto 1.5rem auto;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            aspect-ratio: 4 / 3;
+            background: #000;
+        }
+        #video, #overlay-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            transform: scaleX(-1);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: white;
+            width: 100%;
+        }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+        }
+        #admin-auth-view p, #admin-register-view p {
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        #user-dashboard { display: none; }
+        #user-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 1.5rem;
+        }
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        .user-details {
+            flex-grow: 1;
+        }
+        .user-details strong {
+            display: block;
+            font-size: 1.1rem;
+        }
+        .user-actions button {
+            margin-left: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            color: white;
+        }
+        .edit-btn { background-color: var(--warning-color); color: var(--text-color); }
+        .delete-btn { background-color: var(--danger-color); }
+        
+        #edit-modal, #delete-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-content h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div class="header">
+        <h1>Panel Pentadbir</h1>
+    </div>
+    <div class="content">
+        <!-- Admin Registration View -->
+        <div id="admin-register-view" style="display: none;">
+            <p id="register-title">Pendaftaran Admin (Kali Pertama Sahaja)</p>
+            <div id="video-container">
+                <video id="video" playsinline autoplay muted></video>
+                <canvas id="overlay-canvas"></canvas>
+            </div>
+            <form id="admin-register-form">
+                <div class="form-group">
+                    <label for="admin-name">Nama:</label>
+                    <input type="text" id="admin-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="admin-position">Jawatan:</label>
+                    <input type="text" id="admin-position" required>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn" style="background-color: var(--primary-color);">Daftar Admin</button>
+                    <button type="button" id="cancel-add-admin-btn" class="btn" style="background-color: var(--secondary-color); display: none;">Batal</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Admin Authentication View -->
+        <div id="admin-auth-view" style="display: none;">
+             <p>Sila Sahkan Identiti Admin</p>
+             <div id="video-container"></div>
+             <p id="auth-status">Sistem sedang mengimbas...</p>
+        </div>
+
+        <!-- User Management Dashboard -->
+        <div id="user-dashboard">
+            <button id="add-admin-btn" class="btn" style="background-color: var(--primary-color); display: none; margin-bottom: 1.5rem;">Tambah Admin Baharu</button>
+            <h2>Senarai Pengguna Berdaftar</h2>
+            <ul id="user-list">
+                <!-- User items will be injected here -->
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="edit-modal">
+    <div class="modal-content">
+        <h2>Kemas Kini Maklumat Pengguna</h2>
+        <form id="edit-user-form">
+            <input type="hidden" id="edit-user-id">
+            <div class="form-group">
+                <label for="edit-name">Nama:</label>
+                <input type="text" id="edit-name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-position">Jawatan:</label>
+                <input type="text" id="edit-position" required>
+            </div>
+            <button type="submit" class="btn" style="background-color: var(--success-color);">Simpan Perubahan</button>
+            <button type="button" id="cancel-edit" class="btn" style="background-color: var(--secondary-color); margin-top: 1rem;">Batal</button>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal">
+    <div class="modal-content">
+        <h2>Sahkan Padam</h2>
+        <p>Adakah anda pasti mahu memadam pengguna ini? Tindakan ini tidak boleh dibatalkan.</p>
+        <div class="btn-group">
+             <button id="confirm-delete-btn" class="btn" style="background-color: var(--danger-color);">Ya, Padam</button>
+             <button id="cancel-delete-btn" class="btn" style="background-color: var(--secondary-color);">Batal</button>
+        </div>
+    </div>
+</div>
+
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDrICpXd4ukkpnoFrRleTzEcR87vIoTM3s",
+      authDomain: "gimikrt-cf2e4.firebaseapp.com",
+      projectId: "gimikrt-cf2e4",
+      storageBucket: "gimikrt-cf2e4.appspot.com",
+      messagingSenderId: "878304778253",
+      appId: "1:878304778253:web:470cc421f6cf6ba0f21d44",
+      measurementId: "G-FBMMM8ZG14"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const videoContainer = document.getElementById('video-container');
+    const adminRegisterView = document.getElementById('admin-register-view');
+    const adminAuthView = document.getElementById('admin-auth-view');
+    const userDashboard = document.getElementById('user-dashboard');
+    const authStatus = document.getElementById('auth-status');
+    const userList = document.getElementById('user-list');
+    const editModal = document.getElementById('edit-modal');
+    const deleteModal = document.getElementById('delete-modal');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    const addAdminBtn = document.getElementById('add-admin-btn');
+    const cancelAddAdminBtn = document.getElementById('cancel-add-admin-btn');
+    
+    let adminDescriptors = [];
+    let stream;
+    let authInterval;
+    let isPrimaryAdmin = false;
+    let userIdToDelete = null;
+
+    async function setupCamera(container) {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        
+        const videoContainerInScope = container.querySelector('#video-container');
+        let videoEl = videoContainerInScope.querySelector('video');
+        if (!videoEl) {
+            videoEl = document.createElement('video');
+            videoEl.playsInline = true;
+            videoEl.autoplay = true;
+            videoEl.muted = true;
+            videoContainerInScope.appendChild(videoEl);
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoEl.srcObject = stream;
+
+        return new Promise((resolve) => {
+            videoEl.onloadedmetadata = () => {
+                resolve(videoEl);
+            };
+        });
+    }
+
+    async function main() {
+        await faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+        await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+        await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+
+        const adminCol = collection(db, "admins");
+        const adminSnapshot = await getDocs(adminCol);
+        
+        if (adminSnapshot.empty) {
+            adminRegisterView.style.display = 'block';
+            await setupCamera(adminRegisterView);
+        } else {
+            adminSnapshot.forEach(doc => {
+                adminDescriptors.push(new Float32Array(doc.data().descriptor));
+            });
+            isPrimaryAdmin = adminSnapshot.size === 1;
+
+            adminAuthView.style.display = 'block';
+            const videoEl = await setupCamera(adminAuthView);
+            videoEl.addEventListener('play', () => authenticateAdmin(videoEl), { once: true });
+        }
+    }
+
+    function authenticateAdmin(videoEl) {
+        const canvas = faceapi.createCanvasFromMedia(videoEl);
+        videoContainer.append(canvas);
+        const displaySize = { width: videoEl.clientWidth, height: videoEl.clientHeight };
+        faceapi.matchDimensions(canvas, displaySize);
+
+        authInterval = setInterval(async () => {
+            const detections = await faceapi.detectAllFaces(videoEl).withFaceLandmarks().withFaceDescriptors();
+            const resizedDetections = faceapi.resizeResults(detections, displaySize);
+            
+            let adminFound = false;
+            for (const detection of resizedDetections) {
+                for (const adminDesc of adminDescriptors) {
+                    const dist = faceapi.euclideanDistance(adminDesc, detection.descriptor);
+                    if (dist < 0.5) {
+                        adminFound = true;
+                        break;
+                    }
+                }
+                if (adminFound) break;
+            }
+
+            if(adminFound) {
+                clearInterval(authInterval);
+                authStatus.textContent = "Identiti Disahkan. Memuatkan Papan Pemuka...";
+                stream.getTracks().forEach(track => track.stop());
+                adminAuthView.style.display = 'none';
+                userDashboard.style.display = 'block';
+                if (isPrimaryAdmin) {
+                    addAdminBtn.style.display = 'block';
+                }
+                await loadUsers();
+            } else {
+                authStatus.textContent = "Admin tidak dikenali. Sila cuba lagi.";
+            }
+        }, 300);
+    }
+    
+    async function loadUsers() {
+        userList.innerHTML = '<li>Memuatkan senarai...</li>';
+        const usersCol = collection(db, "users");
+        const userSnapshot = await getDocs(usersCol);
+        userList.innerHTML = '';
+        if (userSnapshot.empty) {
+            userList.innerHTML = '<li>Tiada pengguna berdaftar.</li>';
+            return;
+        }
+
+        userSnapshot.forEach(doc => {
+            const user = doc.data();
+            const li = document.createElement('li');
+            li.className = 'user-item';
+            li.innerHTML = `
+                <div class="user-details">
+                    <strong>${user.name}</strong>
+                    <span>${user.position}</span>
+                </div>
+                <div class="user-actions">
+                    <button class="edit-btn" data-id="${doc.id}" data-name="${user.name}" data-position="${user.position}">Kemas Kini</button>
+                    <button class="delete-btn" data-id="${doc.id}">Padam</button>
+                </div>
+            `;
+            userList.appendChild(li);
+        });
+    }
+
+    document.getElementById('admin-register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('admin-name').value;
+        const position = document.getElementById('admin-position').value;
+        const videoEl = adminRegisterView.querySelector('video');
+
+        const detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
+        if (detection) {
+            const descriptorArray = Array.from(detection.descriptor);
+            await addDoc(collection(db, "admins"), { name, position, descriptor: descriptorArray });
+            alert("Admin berjaya didaftarkan! Sila muat semula halaman.");
+            adminRegisterView.style.display = 'none';
+        } else {
+            alert("Wajah tidak dikesan. Sila cuba lagi.");
+        }
+    });
+
+    userList.addEventListener('click', (e) => {
+        const target = e.target;
+        
+        if (target.classList.contains('delete-btn')) {
+            userIdToDelete = target.dataset.id;
+            deleteModal.style.display = 'flex';
+        }
+        
+        if (target.classList.contains('edit-btn')) {
+            document.getElementById('edit-user-id').value = target.dataset.id;
+            document.getElementById('edit-name').value = target.dataset.name;
+            document.getElementById('edit-position').value = target.dataset.position;
+            editModal.style.display = 'flex';
+        }
+    });
+    
+    addAdminBtn.addEventListener('click', async () => {
+        userDashboard.style.display = 'none';
+        adminRegisterView.style.display = 'block';
+        document.getElementById('register-title').textContent = 'Daftar Admin Baharu';
+        cancelAddAdminBtn.style.display = 'block';
+        await setupCamera(adminRegisterView);
+    });
+
+    cancelAddAdminBtn.addEventListener('click', () => {
+        adminRegisterView.style.display = 'none';
+        userDashboard.style.display = 'block';
+        stream.getTracks().forEach(track => track.stop());
+    });
+
+    document.getElementById('cancel-edit').addEventListener('click', () => {
+        editModal.style.display = 'none';
+    });
+
+    document.getElementById('edit-user-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-user-id').value;
+        const name = document.getElementById('edit-name').value;
+        const position = document.getElementById('edit-position').value;
+
+        const userDoc = doc(db, "users", id);
+        await updateDoc(userDoc, { name, position });
+        editModal.style.display = 'none';
+        await loadUsers();
+    });
+
+    cancelDeleteBtn.addEventListener('click', () => {
+        deleteModal.style.display = 'none';
+        userIdToDelete = null;
+    });
+
+    confirmDeleteBtn.addEventListener('click', async () => {
+        if (userIdToDelete) {
+            await deleteDoc(doc(db, "users", userIdToDelete));
+            deleteModal.style.display = 'none';
+            userIdToDelete = null;
+            await loadUsers();
+        }
+    });
+
+    main();
+
+</script>
+</body>
+</html>
+
