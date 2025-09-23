@@ -181,7 +181,7 @@
             top: 0; left: 0;
             width: 100%; height: 100%;
             background: #000;
-            display: none;
+            display: none; /* Initially hidden */
             flex-direction: column;
             justify-content: center;
             align-items: center;
@@ -330,7 +330,7 @@
     let handDetector = null;
     let handVerificationTimer = null;
     let lockedOnDescriptor = null;
-    let matrixAnimationId = null;
+    let matrixInterval = null;
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
@@ -700,7 +700,8 @@
             i++;
         }, 80);
     }
-
+    
+    let matrixAnimationId;
     function startMatrixAnimation() {
         const context = matrixCanvas.getContext('2d');
         matrixCanvas.width = matrixCanvas.clientWidth;
@@ -726,13 +727,21 @@
                 rainDrops[i]++;
             }
         };
-        if (matrixInterval) clearInterval(matrixInterval);
-        matrixInterval = setInterval(draw, 33);
+
+        const animate = () => {
+            draw();
+            matrixAnimationId = requestAnimationFrame(animate);
+        }
+        
+        if (matrixAnimationId) {
+            cancelAnimationFrame(matrixAnimationId);
+        }
+        animate();
     }
 
     function stopMatrixAnimation() {
-        if(matrixInterval) clearInterval(matrixInterval);
-        matrixInterval = null;
+        if(matrixAnimationId) cancelAnimationFrame(matrixAnimationId);
+        matrixAnimationId = null;
     }
 
 
