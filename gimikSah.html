@@ -153,7 +153,7 @@
         #register-btn { background-color: var(--primary-color); }
         #recognize-btn { background-color: var(--success-color); }
         
-        #registration-form, #registration-choice, #recognition-controls {
+        #registration-form, #registration-choice, #recognition-controls, #update-confirmation {
             display: none;
             flex-direction: column;
             gap: 1rem;
@@ -176,12 +176,46 @@
             text-align: center; display: none;
         }
 
+        #loading-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+            flex-direction: column;
+        }
+        #loading-text {
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            color: var(--matrix-green);
+            margin-bottom: 1rem;
+        }
+        #progress-bar-container {
+            width: 80%;
+            max-width: 400px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--matrix-green);
+        }
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--matrix-green);
+            transition: width 0.5s ease;
+        }
+
         #success-screen {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
             background: #000;
-            display: none;
+            display: none; /* Initially hidden */
             flex-direction: column;
             justify-content: center;
             align-items: center;
@@ -203,7 +237,7 @@
              z-index: 1;
         }
         #success-screen h1, #success-screen p {
-            opacity: 0; /* Keep text hidden for now */
+            opacity: 0;
         }
         #success-screen h1 {
             font-size: 2.5rem;
@@ -250,7 +284,6 @@
         <div id="main-menu" class="btn-group">
             <button id="register-btn" class="btn">Daftar Pengguna</button>
             <button id="recognize-btn" class="btn">Mula Pengesanan</button>
-            <button id="debug-success-btn" class="btn" style="background-color: var(--warning-color); color: var(--text-color);">Uji Skrin Berjaya</button>
         </div>
         <div id="registration-choice">
              <div class="btn-group">
@@ -277,6 +310,13 @@
                 <button type="button" id="cancel-form-btn" class="btn" style="background-color: var(--secondary-color);">Batal</button>
             </div>
         </form>
+        <div id="update-confirmation">
+            <p id="update-message"></p>
+            <div class="btn-group">
+                <button id="confirm-update-btn" class="btn" style="background-color: var(--success-color);">Ya, Kemas Kini</button>
+                <button id="cancel-update-btn" class="btn" style="background-color: var(--secondary-color);">Batal</button>
+            </div>
+        </div>
         <div id="recognition-controls">
             <button id="back-btn" class="btn" style="background-color: var(--secondary-color);">Kembali ke Menu Utama</button>
         </div>
@@ -291,9 +331,35 @@
         </div>
         <button id="reset-btn" class="btn">Kembali ke Menu Utama</button>
     </div>
+    <div id="loading-overlay">
+        <div id="loading-text">Memuatkan Model AI...</div>
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+    </div>
 </div>
 
-<script>
+<script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+
+    // --- KONFIGURASI FIREBASE ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDrICpXd4ukkpnoFrRleTzEcR87vIoTM3s",
+      authDomain: "gimikrt-cf2e4.firebaseapp.com",
+      projectId: "gimikrt-cf2e4",
+      storageBucket: "gimikrt-cf2e4.appspot.com",
+      messagingSenderId: "878304778253",
+      appId: "1:878304778253:web:470cc421f6cf6ba0f21d44",
+      measurementId: "G-FBMMM8ZG14"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+
     const video = document.getElementById('video');
     const overlayCanvas = document.getElementById('overlay-canvas');
     const mainMenu = document.getElementById('main-menu');
@@ -319,18 +385,27 @@
     const successSubtitle = document.getElementById('success-subtitle');
     const resetBtn = document.getElementById('reset-btn');
     const matrixCanvas = document.getElementById('matrix-canvas');
-    const debugSuccessBtn = document.getElementById('debug-success-btn');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingText = document.getElementById('loading-text');
+    const progressBar = document.getElementById('progress-bar');
+    const updateConfirmation = document.getElementById('update-confirmation');
+    const updateMessage = document.getElementById('update-message');
+    const confirmUpdateBtn = document.getElementById('confirm-update-btn');
+    const cancelUpdateBtn = document.getElementById('cancel-update-btn');
 
     let stream = null;
     let detectionInterval = null;
     let guideInterval = null; 
     let faceMatcher = null;
-    let registeredUser = null;
+    let registeredUsers = [];
     let firstMatchTime = null;
     let handDetector = null;
     let handVerificationTimer = null;
     let lockedOnDescriptor = null;
     let matrixAnimationId = null;
+    let areModelsLoaded = false;
+    let userToUpdate = null;
+    let registrationScanInterval = null;
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
@@ -341,12 +416,30 @@
     function setPlaceholderContent(htmlContent) {
         placeholder.innerHTML = htmlContent;
     }
+    
+    function showLoadingBar(text, duration) {
+        loadingText.textContent = text;
+        progressBar.style.width = '0%';
+        loadingOverlay.style.display = 'flex';
+        void progressBar.offsetWidth;
+        progressBar.style.transition = `width ${duration}s ease-in-out`;
+        progressBar.style.width = '100%';
+    }
 
-    async function loadModels() {
-        if (typeof faceapi === 'undefined' || typeof handPoseDetection === 'undefined') {
-            setTimeout(loadModels, 500); return;
+    function hideLoadingBar() {
+        loadingOverlay.style.display = 'none';
+        progressBar.style.width = '0%';
+    }
+
+
+    async function loadModels(onComplete) {
+        if (areModelsLoaded) {
+            if (onComplete) onComplete();
+            return;
         }
-        setPlaceholderContent(initialPlaceholderContent.replace('Sistem Sedia', 'Memuatkan model AI...'));
+
+        showLoadingBar('Memuatkan Model AI...', 2);
+        
         try {
             await Promise.all([
                 faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_MODEL_URL),
@@ -354,7 +447,6 @@
                 faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
             ]);
             
-            setPlaceholderContent(initialPlaceholderContent.replace('Sistem Sedia', 'Memuatkan model tangan...'));
             const model = handPoseDetection.SupportedModels.MediaPipeHands;
             const detectorConfig = {
               runtime: 'mediapipe',
@@ -362,27 +454,56 @@
               modelType: 'lite'
             };
             handDetector = await handPoseDetection.createDetector(model, detectorConfig);
-            
-            setPlaceholderContent(initialPlaceholderContent);
-            checkRegisteredUser();
+            areModelsLoaded = true;
+
+            setTimeout(() => {
+                hideLoadingBar();
+                if (onComplete) onComplete();
+            }, 2000);
+
         } catch (err) {
             console.error(err);
             showError("Gagal memuatkan model AI. Sila muat semula.");
+            hideLoadingBar();
         }
     }
 
-    function checkRegisteredUser() {
-        const userData = localStorage.getItem('registeredUser');
-        if (userData) {
-            registeredUser = JSON.parse(userData);
-            registeredUser.descriptor = new Float32Array(Object.values(registeredUser.descriptor));
-            const labeledDescriptor = new faceapi.LabeledFaceDescriptors(registeredUser.name, [registeredUser.descriptor]);
-            faceMatcher = new faceapi.FaceMatcher(labeledDescriptor, 0.5); 
-            statusMessage.innerText = `Pengguna "${registeredUser.name}" telah didaftarkan.`;
-            recognizeBtn.style.display = 'flex';
-        } else {
-            statusMessage.innerText = 'Tiada pengguna didaftarkan. Sila daftar.';
-            recognizeBtn.style.display = 'none';
+    function unloadModels() {
+        areModelsLoaded = false;
+        handDetector = null;
+    }
+
+    async function loadRegisteredUsers() {
+        statusMessage.innerText = 'Memuatkan data pengguna dari pangkalan data...';
+        try {
+            const querySnapshot = await getDocs(collection(db, "users"));
+            const users = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                users.push({
+                    id: doc.id,
+                    name: data.name,
+                    position: data.position,
+                    descriptor: new Float32Array(data.descriptor)
+                });
+            });
+            registeredUsers = users;
+
+            if (registeredUsers.length > 0) {
+                const labeledDescriptors = registeredUsers.map(user =>
+                    new faceapi.LabeledFaceDescriptors(user.name, [user.descriptor])
+                );
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
+                statusMessage.innerText = `${registeredUsers.length}/20 pengguna telah dimuatkan.`;
+                recognizeBtn.style.display = 'flex';
+            } else {
+                statusMessage.innerText = 'Tiada pengguna didaftarkan. Sila daftar.';
+                recognizeBtn.style.display = 'none';
+            }
+        } catch (e) {
+            console.error("Error fetching users: ", e);
+            showError("Gagal memuatkan data pengguna.");
+            statusMessage.innerText = 'Gagal memuatkan data.';
         }
     }
     
@@ -447,115 +568,138 @@
         stopCamera();
         recognitionControls.style.display = 'none';
         handGuideBox.style.display = 'none';
-        successScreen.style.display = 'flex';
+
+        showLoadingBar('Memproses Pelancaran...', 1);
         setTimeout(() => {
-            successScreen.style.opacity = 1;
-            startMatrixAnimation();
-        }, 10);
+            hideLoadingBar();
+            unloadModels();
+
+            successScreen.style.display = 'flex';
+            setTimeout(() => {
+                successScreen.style.opacity = 1;
+                startMatrixAnimation();
+                setTimeout(() => {
+                    decodeTextEffect('PENGESAHAN BERJAYA', successTitle, () => {
+                        decodeTextEffect('Pelancaran Telah Disempurnakan', successSubtitle, null);
+                    });
+                }, 500);
+            }, 10);
+        }, 1000);
     }
 
     function startRecognition() {
-        clearAllIntervals();
-        startCamera().then(success => {
-            if (!success) return;
-            statusMessage.innerText = "";
-            mainMenu.style.display = 'none';
-            recognitionControls.style.display = 'flex';
-            firstMatchTime = null;
-            lockedOnDescriptor = null;
+        loadModels(() => {
+            clearAllIntervals();
+            startCamera().then(success => {
+                if (!success) return;
+                statusMessage.innerText = "";
+                mainMenu.style.display = 'none';
+                recognitionControls.style.display = 'flex';
+                firstMatchTime = null;
+                lockedOnDescriptor = null;
 
-            const displaySize = { width: video.clientWidth, height: video.clientHeight };
-            faceapi.matchDimensions(overlayCanvas, displaySize);
+                const displaySize = { width: video.clientWidth, height: video.clientHeight };
+                faceapi.matchDimensions(overlayCanvas, displaySize);
 
-            detectionInterval = setInterval(async () => {
-                const [faceDetections, hands] = await Promise.all([
-                    faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors(),
-                    handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
-                ]);
-                
-                const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
-                const context = overlayCanvas.getContext('2d');
-                context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-                
-                let recognizedFaceResult = null;
-                
-                // Find if the registered user is in the frame
-                for (const detection of resizedDetections) {
-                    const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-                    if (bestMatch.label !== 'unknown') {
-                        recognizedFaceResult = detection;
-                        break;
-                    }
-                }
-
-                if (lockedOnDescriptor && recognizedFaceResult) {
-                    // --- ID LOCKED STATE ---
-                    const { flippedBox } = processDetection(recognizedFaceResult);
-                    new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
-                    drawMatrixInfo(context, flippedBox, registeredUser.name, registeredUser.position, recognizedFaceResult.detection.score);
-
-                    // Hand guide logic
-                    handGuideBox.style.display = 'flex';
-                    let handInPosition = false;
-                    const handGuideRect = handGuideBox.getBoundingClientRect();
-                    const videoRect = video.getBoundingClientRect();
-                    if (hands.length > 0) {
-                        hands.forEach(hand => {
-                            const wrist = hand.keypoints[0];
-                            const wristX = (wrist.x / video.videoWidth) * videoRect.width;
-                            const wristY = (wrist.y / video.videoHeight) * videoRect.height;
-                             const flippedWristX = videoRect.width - wristX;
-
-                            if (flippedWristX > handGuideRect.left - videoRect.left && flippedWristX < handGuideRect.right - videoRect.left &&
-                                wristY > handGuideRect.top - videoRect.top && wristY < handGuideRect.bottom - videoRect.top) {
-                                handInPosition = true;
+                detectionInterval = setInterval(async () => {
+                    const [faceDetections, hands] = await Promise.all([
+                        faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors(),
+                        handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
+                    ]);
+                    
+                    const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
+                    const context = overlayCanvas.getContext('2d');
+                    context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                    
+                    let recognizedFaceResult = null;
+                    
+                    if (lockedOnDescriptor) {
+                        let bestMatchDist = 1;
+                        for (const detection of resizedDetections) {
+                            const dist = faceapi.euclideanDistance(lockedOnDescriptor, detection.descriptor);
+                            if (dist < 0.5 && dist < bestMatchDist) {
+                                bestMatchDist = dist;
+                                recognizedFaceResult = detection;
                             }
-                        });
-                    }
-                    if (handInPosition) {
-                        if (!handGuideBox.classList.contains('detecting') && !handGuideBox.classList.contains('verified')) {
-                            handGuideBox.classList.add('detecting');
-                            handGuideText.textContent = "Pengesahan kedua...";
-                            handVerificationTimer = setTimeout(() => {
-                                handGuideBox.classList.remove('detecting');
-                                handGuideBox.classList.add('verified');
-                                handGuideText.textContent = "Pengesahan Berjaya";
-                                setTimeout(showSuccessScreen, 500);
-                            }, 2000);
                         }
                     } else {
-                        clearTimeout(handVerificationTimer);
-                        handVerificationTimer = null;
-                        handGuideBox.classList.remove('detecting', 'verified');
-                        handGuideText.textContent = 'Letakkan tangan anda di sini';
+                        for (const detection of resizedDetections) {
+                            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+                            if (bestMatch.label !== 'unknown') {
+                                recognizedFaceResult = detection;
+                                break;
+                            }
+                        }
                     }
 
-                } else {
-                    // --- SCANNING STATE ---
-                    lockedOnDescriptor = null;
-                    handGuideBox.style.display = 'none';
-                    if (resizedDetections.length > 0) {
-                        resizedDetections.forEach(detection => {
-                            const { flippedBox, bestMatch, score } = processDetection(detection);
-                            
-                            if (bestMatch.label !== 'unknown') {
-                                if (firstMatchTime === null) firstMatchTime = Date.now();
-                                new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
-                                if (Date.now() - firstMatchTime < 1000) {
-                                    drawMatrixText(context, "ID DISAHKAN...", flippedBox.x + flippedBox.width / 2 - 80, flippedBox.y + flippedBox.height / 2);
-                                } else {
-                                    lockedOnDescriptor = detection.descriptor; // Lock on
+                    if (recognizedFaceResult) {
+                        const { flippedBox, bestMatch, score } = processDetection(recognizedFaceResult);
+                        new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
+
+                        if (firstMatchTime === null) firstMatchTime = Date.now();
+                        
+                        if (Date.now() - firstMatchTime < 1000) {
+                            drawMatrixText(context, "ID DISAHKAN...", flippedBox.x + flippedBox.width / 2 - 80, flippedBox.y + flippedBox.height / 2);
+                        } else {
+                            lockedOnDescriptor = recognizedFaceResult.descriptor;
+                            const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
+                            if (matchedUser) { // Safety check
+                                drawMatrixInfo(context, flippedBox, matchedUser.name, matchedUser.position, score);
+                            }
+
+                            // Hand guide logic
+                            handGuideBox.style.display = 'flex';
+                            let handInPosition = false;
+                            const handGuideRect = handGuideBox.getBoundingClientRect();
+                            const videoRect = video.getBoundingClientRect();
+                            if (hands.length > 0) {
+                                hands.forEach(hand => {
+                                    const wrist = hand.keypoints[0];
+                                    const wristX = (wrist.x / video.videoWidth) * videoRect.width;
+                                    const wristY = (wrist.y / video.videoHeight) * videoRect.height;
+                                     const flippedWristX = videoRect.width - wristX;
+
+                                    if (flippedWristX > handGuideRect.left - videoRect.left && flippedWristX < handGuideRect.right - videoRect.left &&
+                                        wristY > handGuideRect.top - videoRect.top && wristY < handGuideRect.bottom - videoRect.top) {
+                                        handInPosition = true;
+                                    }
+                                });
+                            }
+                            if (handInPosition) {
+                                if (!handGuideBox.classList.contains('detecting') && !handGuideBox.classList.contains('verified')) {
+                                    handGuideBox.classList.add('detecting');
+                                    handGuideText.textContent = "Pengesahan kedua...";
+                                    handVerificationTimer = setTimeout(() => {
+                                        handGuideBox.classList.remove('detecting');
+                                        handGuideBox.classList.add('verified');
+                                        handGuideText.textContent = "Pengesahan Berjaya";
+                                        setTimeout(showSuccessScreen, 500);
+                                    }, 2000);
                                 }
                             } else {
-                                new faceapi.draw.DrawBox(flippedBox, { label: `TIADA AKSES (${score.toFixed(2)})`, boxColor: 'rgba(220, 53, 69, 0.7)' }).draw(overlayCanvas);
+                                clearTimeout(handVerificationTimer);
+                                handVerificationTimer = null;
+                                handGuideBox.classList.remove('detecting', 'verified');
+                                handGuideText.textContent = 'Letakkan tangan anda di sini';
                             }
-                        });
+                        }
+                    } else {
+                        // No recognized face, or locked face lost
+                        lockedOnDescriptor = null;
+                        firstMatchTime = null;
+                        handGuideBox.style.display = 'none';
+
+                        if (resizedDetections.length > 0) {
+                            resizedDetections.forEach(detection => {
+                                const { flippedBox, score } = processDetection(detection);
+                                new faceapi.draw.DrawBox(flippedBox, { label: `TIADA AKSES (${score.toFixed(2)})`, boxColor: 'rgba(220, 53, 69, 0.7)' }).draw(overlayCanvas);
+                            });
+                        } else {
+                            drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2 - 150, overlayCanvas.height / 2);
+                        }
                     }
-                    if (resizedDetections.length === 0) {
-                         drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2 - 150, overlayCanvas.height / 2);
-                    }
-                }
-            }, 100);
+                }, 100);
+            });
         });
     }
 
@@ -570,7 +714,7 @@
             height: box.height + paddingY
         };
         const flippedBox = { x: overlayCanvas.width - paddedBox.x - paddedBox.width, y: paddedBox.y, width: paddedBox.width, height: paddedBox.height };
-        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+        const bestMatch = faceMatcher ? faceMatcher.findBestMatch(detection.descriptor) : { label: 'unknown' };
         const score = detection.detection.score;
         return { flippedBox, bestMatch, score };
     };
@@ -582,7 +726,30 @@
             if (!success) return;
             imageUploadGroup.style.display = 'none';
             registrationForm.style.display = 'flex';
-            statusMessage.innerText = "Lengkapkan borang di bawah.";
+            
+            document.getElementById('name-input').value = '';
+            document.getElementById('position-input').value = '';
+            statusMessage.innerText = "Sistem sedang mengimbas...";
+
+            let scanHasFilled = false;
+            registrationScanInterval = setInterval(async () => {
+                if (scanHasFilled) return;
+
+                const detection = await faceapi.detectSingleFace(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+
+                if (detection && faceMatcher) {
+                    const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+                    if (bestMatch.label !== 'unknown' && bestMatch.distance < 0.5) {
+                        const matchedUser = registeredUsers.find(u => u.name === bestMatch.label);
+                        if (matchedUser) {
+                            document.getElementById('name-input').value = matchedUser.name;
+                            document.getElementById('position-input').value = matchedUser.position;
+                            statusMessage.innerText = `Wajah dikesan sebagai ${matchedUser.name}. Kemas kini maklumat jika perlu.`;
+                            scanHasFilled = true;
+                        }
+                    }
+                }
+            }, 1000);
 
             const drawStaticGuide = () => {
                 const context = overlayCanvas.getContext('2d');
@@ -621,39 +788,87 @@
         setPlaceholderContent('<span>Sila muat naik gambar</span>');
     }
     
+    async function processRegistration(name, position, detection) {
+        if (!detection) {
+             statusMessage.innerText = "Wajah tidak dapat dikesan. Sila cuba lagi.";
+             setTimeout(handleCancel, 3000);
+             return;
+        }
+
+        const newDescriptor = detection.descriptor;
+        let bestMatch = null;
+        if (registeredUsers.length > 0) {
+            const tempMatcher = new faceapi.FaceMatcher(registeredUsers.map(u => new faceapi.LabeledFaceDescriptors(u.name, [u.descriptor])));
+            bestMatch = tempMatcher.findBestMatch(newDescriptor);
+        }
+
+        if (bestMatch && bestMatch.label !== 'unknown' && bestMatch.distance < 0.5) {
+            const matchedUser = registeredUsers.find(u => u.name === bestMatch.label);
+            userToUpdate = { 
+                id: matchedUser.id,
+                name: name,
+                position: position,
+                descriptor: Array.from(newDescriptor)
+            };
+            updateMessage.textContent = `Wajah ini telah didaftarkan sebagai "${matchedUser.name}". Kemas kini maklumat?`;
+            registrationForm.style.display = 'none';
+            updateConfirmation.style.display = 'flex';
+        } else {
+            await saveUserData(name, position, newDescriptor);
+        }
+    }
+
     async function handleImageRegistration(file, name, position) {
         statusMessage.innerText = "Memproses imej... Sila tunggu.";
         const image = await faceapi.bufferToImage(file);
         const detection = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor();
-        if (detection) {
-            saveUserData(name, position, detection.descriptor);
-        } else {
-            statusMessage.innerText = "Wajah tidak dapat dikesan dalam imej.";
-             setTimeout(() => { cancelFormBtn.click(); }, 3000);
-        }
+        await processRegistration(name, position, detection);
     }
 
     async function handleVideoRegistration(name, position) {
         statusMessage.innerText = "Memproses wajah... Sila tunggu.";
         const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-        if (detection) {
-            saveUserData(name, position, detection.descriptor);
-        } else {
-            statusMessage.innerText = "Wajah tidak dapat dikesan dari video.";
-            setTimeout(() => { cancelFormBtn.click(); }, 3000);
-        }
+        await processRegistration(name, position, detection);
     }
 
-    function saveUserData(name, position, descriptor) {
-        const userToSave = { name, position, descriptor };
-        localStorage.setItem('registeredUser', JSON.stringify(userToSave));
-        statusMessage.innerText = "Pendaftaran Berjaya!";
-        handleCancel();
+    async function saveUserData(name, position, descriptor) {
+        try {
+            const descriptorArray = Array.from(descriptor);
+            await addDoc(collection(db, "users"), {
+                name: name,
+                position: position,
+                descriptor: descriptorArray
+            });
+            statusMessage.innerText = "Pendaftaran Berjaya!";
+            handleCancel();
+        } catch (e) {
+            console.error("Error adding document: ", e);
+            statusMessage.innerText = "Pendaftaran Gagal. Sila lihat konsol.";
+        }
+    }
+    
+    async function updateUserData() {
+        if (!userToUpdate) return;
+        statusMessage.innerText = "Mengemas kini data...";
+        try {
+            const userDoc = doc(db, "users", userToUpdate.id);
+            await updateDoc(userDoc, {
+                name: userToUpdate.name,
+                position: userToUpdate.position,
+                descriptor: userToUpdate.descriptor
+            });
+            statusMessage.innerText = "Data berjaya dikemas kini!";
+            handleCancel();
+        } catch (e) {
+            console.error("Error updating document: ", e);
+            statusMessage.innerText = "Gagal mengemas kini data.";
+        }
     }
 
     function clearAllIntervals() {
         if(detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
         if(guideInterval) { clearInterval(guideInterval); guideInterval = null; }
+        if(registrationScanInterval) { clearInterval(registrationScanInterval); registrationScanInterval = null; }
         overlayCanvas.getContext('2d').clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     }
 
@@ -698,8 +913,8 @@
     
     function startMatrixAnimation() {
         const context = matrixCanvas.getContext('2d');
-        matrixCanvas.width = window.innerWidth;
-        matrixCanvas.height = window.innerHeight;
+        matrixCanvas.width = matrixCanvas.clientWidth;
+        matrixCanvas.height = matrixCanvas.clientHeight;
 
         const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
         const alphabet = katakana + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -745,6 +960,7 @@
         registrationForm.style.display = 'none';
         registrationChoice.style.display = 'none';
         recognitionControls.style.display = 'none';
+        updateConfirmation.style.display = 'none';
         successScreen.style.display = 'none';
         successScreen.style.opacity = 0;
         handGuideBox.style.display = 'none';
@@ -752,17 +968,19 @@
         imageUploadInput.value = '';
         stopCamera();
         setPlaceholderContent(initialPlaceholderContent);
-        checkRegisteredUser(); 
-        successTitle.textContent = '';
-        successSubtitle.textContent = '';
+        loadRegisteredUsers();
     }
 
     registerBtn.addEventListener('click', () => {
+        if (registeredUsers.length >= 20) {
+            statusMessage.innerText = 'Pendaftaran telah penuh (Had 20 pengguna).';
+            return;
+        }
         mainMenu.style.display = 'none';
-        registrationChoice.style.display = 'flex';
-        statusMessage.innerText = 'Pilih kaedah pendaftaran.';
-        document.getElementById('name-input').value = 'Ali Ayub';
-        document.getElementById('position-input').value = 'JA3';
+        loadModels(() => {
+            registrationChoice.style.display = 'flex';
+            statusMessage.innerText = 'Pilih kaedah pendaftaran.';
+        });
     });
     registerCameraBtn.addEventListener('click', startRegistrationGuide);
     registerImageBtn.addEventListener('click', startImageUploadRegistration);
@@ -771,7 +989,8 @@
     cancelFormBtn.addEventListener('click', handleCancel);
     backBtn.addEventListener('click', handleCancel);
     resetBtn.addEventListener('click', handleCancel);
-    debugSuccessBtn.addEventListener('click', showSuccessScreen);
+    confirmUpdateBtn.addEventListener('click', updateUserData);
+    cancelUpdateBtn.addEventListener('click', handleCancel);
 
     registrationForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -783,18 +1002,23 @@
         }
         clearAllIntervals();
         if (imageFile) {
-            handleImageRegistration(imageFile, name, position);
+            await handleImageRegistration(imageFile, name, position);
         } else {
-            handleVideoRegistration(name, position);
+            await handleVideoRegistration(name, position);
         }
     });
-    recognizeBtn.addEventListener('click', startRecognition);
+    recognizeBtn.addEventListener('click', () => {
+        loadModels(startRecognition);
+    });
 
     function showError(msg) {
         errorMessage.innerText = msg;
         errorMessage.style.display = 'block';
     }
-    loadModels();
+    
+    setPlaceholderContent(initialPlaceholderContent);
+    loadRegisteredUsers();
+
 </script>
 </body>
 </html>
