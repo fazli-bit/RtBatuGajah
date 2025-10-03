@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galeri Digital 3D Interaktif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Menambah importmap untuk menguruskan modul Three.js -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"
+        }
+    }
+    </script>
+    <style>
+        body { margin: 0; font-family: 'Inter', sans-serif; background-color: #000; color: white; overflow: hidden; }
+        canvas { display: block; }
+        #blocker { position: absolute; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; text-align: center; z-index: 10; }
+        #instructions { width: 50%; cursor: pointer; padding: 20px; background-color: #111827; border-radius: 10px; border: 1px solid #374151; }
+        #crosshair { display: none !important; }
+        #artwork-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { max-width: 80vw; max-height: 80vh; background-color: #fefefe; padding: 20px; border-radius: 8px; text-align: center; color: black; }
+        .modal-content img { max-width: 100%; max-height: 70vh; object-fit: contain; margin-bottom: 15px; }
+        #close-modal { position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="blocker">
+        <div id="instructions">
+            <h1 class="text-3xl font-bold mb-4">Selamat Datang ke Galeri Digital</h1>
+            <p class="text-lg">Klik untuk masuk</p>
+            <br>
+            <p>Guna ▲/▼ untuk bergerak ke depan/belakang</p>
+            <p>Guna ◀/▶ untuk berpusing 90 darjah</p>
+            <p>Klik Kanan atau 'Esc' untuk kembali dari paparan karya</p>
+        </div>
+    </div>
+
+    <div id="crosshair"></div>
+
+    <div id="artwork-modal">
+        <span id="close-modal">&times;</span>
+        <div class="modal-content">
+            <img id="modal-img" src="" alt="Karya seni dipaparkan penuh">
+            <h2 id="modal-title" class="text-2xl font-bold"></h2>
+            <p id="modal-artist" class="text-lg text-gray-600"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        let camera, scene, renderer;
+        const objects = []; 
+        let raycaster;
+
+        let gameActive = false; 
+
+        let currentPositionState = 1;
+        const position1 = new THREE.Vector3(0, 5, 20);
+        const position2 = new THREE.Vector3(0, 5, -15);
+        let targetPosition = new THREE.Vector3();
+
+        let targetRotationY;
+        let isRotating = false;
+        
+        const artworks = [
+            // Dinding Depan (z=-39.9) - 3 karya
+            { img: 'https://placehold.co/400x300/e74c3c/ffffff?text=Depan+1', title: 'Horizon Merah', artist: 'Artis A', position: new THREE.Vector3(-10, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
+            { img: 'https://placehold.co/400x300/9b59b6/ffffff?text=Depan+2', title: 'Lembayung Senja', artist: 'Artis B', position: new THREE.Vector3(0, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
+            { img: 'https://placehold.co/400x300/f1c40f/ffffff?text=Depan+3', title: 'Gurun Emas', artist: 'Artis C', position: new THREE.Vector3(10, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
+
+            // Dinding Kanan (x=14.9) - 6 karya
+            { img: 'https://placehold.co/300x400/2ecc71/ffffff?text=Kanan+1', title: 'Rimba Tropika', artist: 'Artis D', position: new THREE.Vector3(14.9, 5, 25), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { img: 'https://placehold.co/300x400/34495e/ffffff?text=Kanan+2', title: 'Batu Granit', artist: 'Artis E', position: new THREE.Vector3(14.9, 5, 12), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { img: 'https://placehold.co/300x400/16a085/ffffff?text=Kanan+3', title: 'Permata Jade', artist: 'Artis F', position: new THREE.Vector3(14.9, 5, -1), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { img: 'https://placehold.co/300x400/f39c12/ffffff?text=Kanan+4', title: 'Mentari Terik', artist: 'Artis G', position: new THREE.Vector3(14.9, 5, -14), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { img: 'https://placehold.co/300x400/2980b9/ffffff?text=Kanan+5', title: 'Air Terjun', artist: 'Artis H', position: new THREE.Vector3(14.9, 5, -27), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            
+            // Dinding Kiri (x=-14.9) - 6 karya
+            { img: 'https://placehold.co/300x400/3498db/ffffff?text=Kiri+1', title: 'Samudera Pasifik', artist: 'Artis I', position: new THREE.Vector3(-14.9, 5, 25), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { img: 'https://placehold.co/300x400/1abc9c/ffffff?text=Kiri+2', title: 'Lagun Firus', artist: 'Artis J', position: new THREE.Vector3(-14.9, 5, 12), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { img: 'https://placehold.co/300x400/8e44ad/ffffff?text=Kiri+3', title: 'Medan Asteroid', artist: 'Artis K', position: new THREE.Vector3(-14.9, 5, -1), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { img: 'https://placehold.co/300x400/c0392b/ffffff?text=Kiri+4', title: 'Tanah Terakota', artist: 'Artis L', position: new THREE.Vector3(-14.9, 5, -14), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { img: 'https://placehold.co/300x400/2c3e50/ffffff?text=Kiri+5', title: 'Malam Gelap', artist: 'Artis M', position: new THREE.Vector3(-14.9, 5, -27), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+        ];
+
+        const clock = new THREE.Clock();
+        init();
+        animate();
+
+        function createPatternTexture(type, size = 256) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d');
+
+            if (type === 'checkered') {
+                const squareSize = size / 2;
+                context.fillStyle = '#7f8c8d';
+                context.fillRect(0, 0, size, size);
+                context.fillStyle = '#95a5a6';
+                context.fillRect(0, 0, squareSize, squareSize);
+                context.fillRect(squareSize, squareSize, squareSize, squareSize);
+            } else if (type === 'urban') {
+                context.fillStyle = '#E0E0E0';
+                context.fillRect(0, 0, size, size);
+                context.strokeStyle = 'rgba(180,180,180,0.4)';
+                context.lineWidth = 1;
+                const thinStep = size / 10;
+                for (let i = 0; i <= size; i += thinStep) {
+                    context.beginPath(); context.moveTo(i, 0); context.lineTo(i, size); context.stroke();
+                    context.beginPath(); context.moveTo(0, i); context.lineTo(size, i); context.stroke();
+                }
+                context.strokeStyle = 'rgba(150,150,150,0.6)';
+                context.lineWidth = 2;
+                const thickStep = size / 2;
+                 for (let i = 0; i <= size; i += thickStep) {
+                    context.beginPath(); context.moveTo(i, 0); context.lineTo(i, size); context.stroke();
+                    context.beginPath(); context.moveTo(0, i); context.lineTo(size, i); context.stroke();
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            return texture;
+        }
+
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x101010);
+            scene.fog = new THREE.Fog(0x101010, 0, 90);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.copy(position1);
+            targetPosition.copy(camera.position);
+
+            camera.rotation.y = 0;
+            targetRotationY = 0;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            
+            // FIX: Sistem pencahayaan dirombak sepenuhnya
+            // 1. Cahaya ambien yang lembut untuk mengisi ruang
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            // 2. Cahaya Hemisphere untuk simulasi cahaya dari atas (siling) dan pantulan dari bawah (lantai)
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x7f8c8d, 1.0); // Cahaya putih dari atas, kelabu dari bawah
+            scene.add(hemisphereLight);
+
+            setupControlsAndUI();
+            raycaster = new THREE.Raycaster();
+
+            createGalleryLayout();
+            loadArtworks();
+
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('click', onDocumentClick);
+            document.addEventListener('contextmenu', onRightClick);
+        }
+        
+        function createGalleryLayout() {
+            const hallWidth = 30;
+            const hallLength = 80;
+            const wallHeight = 20;
+            
+            const floorTexture = createPatternTexture('checkered', 128);
+            floorTexture.repeat.set(hallWidth / 4, hallLength / 4);
+            const floorMaterial = new THREE.MeshLambertMaterial({ map: floorTexture });
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(hallWidth, hallLength), floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+
+            // FIX: Material siling ditukar kepada MeshBasicMaterial supaya ia sentiasa cerah
+            const ceilingMaterial = new THREE.MeshBasicMaterial({ color: 0xf0f0f0 }); // Tidak dipengaruhi cahaya
+            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(hallWidth, hallLength), ceilingMaterial);
+            ceiling.position.y = wallHeight;
+            ceiling.rotation.x = Math.PI / 2;
+            scene.add(ceiling);
+
+            const wallTexture = createPatternTexture('urban', 256);
+            const wallMaterial = new THREE.MeshLambertMaterial({ map: wallTexture });
+
+            const sideWallGeo = new THREE.PlaneGeometry(hallLength, wallHeight);
+            const leftWall = new THREE.Mesh(sideWallGeo, wallMaterial.clone());
+            leftWall.material.map.repeat.set(hallLength / 10, wallHeight / 10);
+            leftWall.position.set(-hallWidth / 2, wallHeight / 2, 0);
+            leftWall.rotation.y = Math.PI / 2;
+            scene.add(leftWall);
+            objects.push(leftWall);
+
+            const rightWall = new THREE.Mesh(sideWallGeo, wallMaterial.clone());
+            rightWall.material.map.repeat.set(hallLength / 10, wallHeight / 10);
+            rightWall.position.set(hallWidth / 2, wallHeight / 2, 0);
+            rightWall.rotation.y = -Math.PI / 2;
+            scene.add(rightWall);
+            objects.push(rightWall);
+
+            const endWallGeo = new THREE.PlaneGeometry(hallWidth, wallHeight);
+            const frontWall = new THREE.Mesh(endWallGeo, wallMaterial.clone());
+            frontWall.material.map.repeat.set(hallWidth / 10, wallHeight / 10);
+            frontWall.position.set(0, wallHeight / 2, -hallLength / 2);
+            scene.add(frontWall);
+            objects.push(frontWall);
+            
+            const backWall = new THREE.Mesh(endWallGeo, wallMaterial.clone());
+            backWall.material.map.repeat.set(hallWidth / 10, wallHeight / 10);
+            backWall.position.set(0, wallHeight / 2, hallLength / 2);
+            backWall.rotation.y = Math.PI;
+            scene.add(backWall);
+            objects.push(backWall);
+
+            const doorGeo = new THREE.PlaneGeometry(5, 10);
+            const doorMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const door = new THREE.Mesh(doorGeo, doorMat);
+            door.position.set(0, 5, hallLength / 2 - 0.1);
+            door.rotation.y = Math.PI;
+            door.userData = { isExit: true };
+            scene.add(door);
+            objects.push(door);
+        }
+
+        function setupControlsAndUI() {
+            const blocker = document.getElementById('blocker');
+            const instructions = document.getElementById('instructions');
+            
+            instructions.addEventListener('click', (event) => {
+                event.stopPropagation();
+                blocker.style.display = 'none';
+                gameActive = true;
+            }, { once: true });
+
+            const onKeyDown = (event) => {
+                if (event.code === 'Escape') {
+                    if (document.getElementById('artwork-modal').style.display === 'flex') {
+                        closeModal();
+                    }
+                    return;
+                }
+
+                if (!gameActive) return; 
+                if (isRotating || camera.position.distanceTo(targetPosition) > 0.1) return;
+
+                const normalizeAngle = (angle) => (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+                const direction = normalizeAngle(targetRotationY);
+
+                const facingForward = Math.abs(direction) < 0.1 || Math.abs(direction - 2*Math.PI) < 0.1;
+                const facingBackward = Math.abs(direction - Math.PI) < 0.1;
+
+                switch (event.code) {
+                    case 'ArrowUp': case 'KeyW':
+                        if (currentPositionState === 1 && facingForward) {
+                            currentPositionState = 2;
+                            targetPosition.copy(position2);
+                        } else if (currentPositionState === 2 && facingBackward) {
+                            currentPositionState = 1;
+                            targetPosition.copy(position1);
+                        }
+                        break;
+                    case 'ArrowDown': case 'KeyS':
+                         if (currentPositionState === 2 && facingForward) {
+                            currentPositionState = 1;
+                            targetPosition.copy(position1);
+                        }
+                        break;
+                    case 'ArrowLeft': case 'KeyA':
+                        targetRotationY += Math.PI / 2;
+                        isRotating = true;
+                        break;
+                    case 'ArrowRight': case 'KeyD':
+                        targetRotationY -= Math.PI / 2;
+                        isRotating = true;
+                        break;
+                }
+            };
+            document.addEventListener('keydown', onKeyDown);
+        }
+
+        function loadArtworks() {
+            const loader = new THREE.TextureLoader();
+            artworks.forEach(art => {
+                const isVertical = art.img.includes('300x400');
+                const artGeo = new THREE.PlaneGeometry(isVertical ? 6 : 8, isVertical ? 8 : 6);
+                const artMat = new THREE.MeshLambertMaterial({ map: loader.load(art.img) });
+                const artworkMesh = new THREE.Mesh(artGeo, artMat);
+                
+                artworkMesh.position.copy(art.position);
+                artworkMesh.rotation.set(art.rotation.x, art.rotation.y, art.rotation.z);
+                
+                artworkMesh.userData = { isArtwork: true, ...art }; 
+                scene.add(artworkMesh);
+                objects.push(artworkMesh);
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onDocumentClick(event) {
+            if (!gameActive) return;
+            
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(objects, false);
+
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                if (obj.userData.isArtwork) {
+                    showArtworkModal(obj.userData);
+                } else if (obj.userData.isExit) {
+                    exitGallery();
+                }
+            }
+        }
+
+        function onRightClick(event) {
+            event.preventDefault();
+            if (document.getElementById('artwork-modal').style.display === 'flex') {
+                closeModal();
+            }
+        }
+        
+        function exitGallery() {
+            const blocker = document.getElementById('blocker');
+            const instructions = document.getElementById('instructions');
+
+            blocker.style.display = 'flex';
+            gameActive = false;
+            
+            camera.position.copy(position1);
+            targetPosition.copy(position1);
+            currentPositionState = 1;
+            camera.rotation.y = 0;
+            targetRotationY = 0;
+
+            const newInstructions = instructions.cloneNode(true);
+            instructions.parentNode.replaceChild(newInstructions, instructions);
+
+            newInstructions.addEventListener('click', (event) => {
+                 event.stopPropagation();
+                 newInstructions.parentElement.style.display = 'none';
+                 gameActive = true;
+            }, { once: true });
+        }
+        
+        function showArtworkModal(data) {
+            gameActive = false;
+            document.getElementById('modal-img').src = data.img;
+            document.getElementById('modal-title').textContent = data.title;
+            document.getElementById('modal-artist').textContent = data.artist;
+            document.getElementById('artwork-modal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('artwork-modal').style.display = 'none';
+            gameActive = true;
+        }
+
+        document.getElementById('close-modal').addEventListener('click', (event) => {
+            event.stopPropagation();
+            closeModal();
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (gameActive) {
+                if(camera.position.distanceTo(targetPosition) > 0.01) {
+                    camera.position.lerp(targetPosition, 0.05);
+                }
+                if (isRotating) {
+                    camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, targetRotationY, 0.1);
+                    if (Math.abs(camera.rotation.y - targetRotationY) < 0.01) {
+                        camera.rotation.y = targetRotationY;
+                        isRotating = false;
+                    }
+                }
+            }
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
+
