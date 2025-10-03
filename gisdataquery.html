@@ -3,123 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pemapar SHP v5 - Integrasi Penuh</title>
+    <title>GIS Analyzer dengan AI</title>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Pustaka Leaflet.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
+    <!-- Pustaka shpjs -->
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+
     <style>
         :root {
             --primary-color: #007bff;
-            --highlight-color: #ffc107;
-            --danger-color: #dc3545;
-            --success-color: #28a745;
+            --secondary-color: #6c757d;
+            --light-gray: #f8f9fa;
+            --border-color: #dee2e6;
+            --sidebar-width: 350px;
         }
         html, body {
             height: 100%;
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f0f2f5;
+            display: flex;
+            overflow: hidden;
         }
-        
-        /* Paparan Log Masuk */
-        #login-view { display: flex; justify-content: center; align-items: center; height: 100%; text-align: center; }
-        #login-card { padding: 40px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        #login-button { background-color: var(--primary-color); color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
-        #login-button:hover { background-color: #0056b3; }
-
-        /* Paparan Aplikasi Utama */
-        #app-view { display: none; flex-direction: column; height: 100%; }
-        #header { padding: 10px 15px; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1001; display: flex; justify-content: space-between; align-items: center; }
-        #header h1 { margin: 0; font-size: 1.2em; }
-        #user-info { display: flex; align-items: center; }
-        #user-display-name { margin-right: 15px; font-weight: bold; }
-        #logout-button { background-color: var(--danger-color); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
-        
-        #main-content { display: flex; flex-grow: 1; overflow: hidden; }
-        #sidebar { width: 300px; padding: 15px; background-color: #fff; border-right: 1px solid #dee2e6; overflow-y: auto; display: flex; flex-direction: column; }
-        #map-container { flex-grow: 1; position: relative; }
-        #map { width: 100%; height: 100%; }
-
-        /* Gaya Panel & Borang */
-        .panel { margin-bottom: 20px; }
-        .panel-title { font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .form-group { margin-bottom: 10px; }
-        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9em; }
-        input, select, button { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { border: none; color: white; cursor: pointer; font-weight: bold; padding: 10px; }
-        #query-button { background-color: var(--primary-color); }
-        #clear-button { background-color: #6c757d; margin-top: 5px; }
-        
-        /* Hasil Carian */
-        #results-panel { flex-grow: 1; overflow-y: auto; }
-        #results-list { list-style-type: none; padding: 0; margin: 0; }
-        .result-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s; }
-        .result-item:hover { background-color: #f0f2f5; }
-        #results-count { font-weight: bold; margin-bottom: 10px; }
-        
-        /* Status & Loader */
-        #status-message { margin-top: 15px; font-weight: bold; text-align: center; }
-        .status-error { color: var(--danger-color); }
-        .status-success { color: var(--success-color); }
-        #loader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; display: none; justify-content: center; align-items: center; color: white; font-size: 1.5em; }
+        #login-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        #app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100%;
+            background-color: var(--light-gray);
+            border-right: 1px solid var(--border-color);
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .panel {
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .panel h3 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        #map-container {
+            flex-grow: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        #map {
+            flex-grow: 1;
+        }
+        #status-bar {
+            padding: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        #results-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #results-list li {
+            padding: 8px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            word-break: break-all;
+        }
+        #results-list li:hover {
+            background-color: #e9ecef;
+        }
+        #ai-answer {
+            min-height: 100px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #logout-btn {
+            margin-top: auto;
+            background-color: var(--secondary-color);
+        }
     </style>
 </head>
 <body>
 
-    <div id="login-view">
-        <div id="login-card">
-            <h2>Selamat Datang ke Pemapar SHP</h2>
-            <p>Sila log masuk untuk teruskan.</p>
-            <button id="login-button">Log Masuk dengan Google</button>
+    <div id="login-container">
+        <h1>GIS Analyzer dengan AI</h1>
+        <p>Sila log masuk untuk meneruskan</p>
+        <button id="login-btn" style="width: 200px;">Log Masuk dengan Google</button>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <div id="sidebar">
+            <h2 id="user-display"></h2>
+            
+            <div id="ai-panel" class="panel hidden">
+                <h3>1. Analisis AI (Gemini)</h3>
+                <p>Tanya soalan mengenai data yang dimuat naik dalam bahasa biasa.</p>
+                <textarea id="ai-question" rows="4" placeholder="Contoh: Ada berapa banyak lot berstatus 'Pertanian'?"></textarea>
+                <button id="ask-ai-btn">Tanya AI</button>
+                <h4>Jawapan:</h4>
+                <div id="ai-answer">Menunggu soalan...</div>
+            </div>
+
+            <div id="query-panel" class="panel hidden">
+                <h3>2. Carian Manual</h3>
+                <select id="field-select"></select>
+                <select id="operator-select">
+                    <option value="equal">Sama Dengan</option>
+                    <option value="like">Mengandungi</option>
+                </select>
+                <input type="text" id="query-value" placeholder="Nilai untuk dicari">
+                <button id="query-btn">Cari</button>
+            </div>
+
+            <div id="results-container" class="panel hidden">
+                <h3>3. Hasil Carian</h3>
+                <p id="results-count">Tiada hasil ditemui.</p>
+                <ul id="results-list"></ul>
+            </div>
+            
+            <div id="upload-panel" class="panel">
+                <h3>4. Muat Naik Fail</h3>
+                <p>Pilih fail Shapefile (.zip)</p>
+                <input type="file" id="shp-file-input" accept=".zip">
+            </div>
+            
+            <button id="logout-btn">Log Keluar</button>
+        </div>
+        <div id="map-container">
+            <div id="map"></div>
+            <div id="status-bar">Sila log masuk untuk memulakan.</div>
         </div>
     </div>
 
-    <div id="app-view">
-        <div id="header">
-            <h1>Pemapar & Kuiri SHP</h1>
-            <div id="user-info">
-                <span id="user-display-name"></span>
-                <button id="logout-button">Log Keluar</button>
-            </div>
-        </div>
-        <div id="main-content">
-            <div id="sidebar">
-                <div class="panel">
-                    <div class="panel-title">1. Muat Naik Fail</div>
-                    <input type="file" id="shp-file-input" accept=".zip" disabled>
-                    <div id="status-message">Sila log masuk untuk memuatkan peta.</div>
-                </div>
-                
-                <div class="panel" id="query-panel" style="display:none;">
-                    <div class="panel-title">2. Buat Kuiri</div>
-                    <div class="form-group"><label for="field-select">Pilih Field:</label><select id="field-select"></select></div>
-                    <div class="form-group"><label for="operator-select">Operator:</label><select id="operator-select"><option value="like">Mengandungi (Like)</option><option value="equal">Sama Dengan (Equal)</option></select></div>
-                    <div class="form-group"><label for="query-input">Nilai Carian:</label><input type="text" id="query-input" placeholder="Masukkan teks..."></div>
-                    <button id="query-button">Cari</button>
-                    <button id="clear-button">Bersihkan Hasil</button>
-                </div>
-
-                <div class="panel" id="results-container">
-                     <div class="panel-title">3. Hasil Carian</div>
-                     <div id="results-count">Tiada hasil.</div>
-                     <div id="results-panel"><ul id="results-list"></ul></div>
-                </div>
-            </div>
-            <div id="map-container">
-                <div id="map"></div>
-                <div id="loader">Memproses fail...</div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
-    
     <script type="module">
+        // Import pustaka Firebase yang diperlukan
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
 
+        // Konfigurasi Firebase anda
         const firebaseConfig = {
             apiKey: "AIzaSyCFvfVIiXlKbgmrhzUoC7sH9birM3jFoVM",
             authDomain: "gisdata-2206c.firebaseapp.com",
@@ -129,147 +200,232 @@
             appId: "1:854261474877:web:c0baf1bd22b694b333ac54"
         };
 
+        // Inisialisasi Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const functions = getFunctions(app);
+        const provider = new GoogleAuthProvider();
 
-        const loginView = document.getElementById('login-view');
-        const appView = document.getElementById('app-view');
-        const loginButton = document.getElementById('login-button');
-        const logoutButton = document.getElementById('logout-button');
-        const userDisplayName = document.getElementById('user-display-name');
+        // Rujukan kepada elemen UI
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userDisplay = document.getElementById('user-display');
+        const statusBar = document.getElementById('status-bar');
 
-        const signIn = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(err => console.error("Login Error:", err));
-        const signOutUser = () => signOut(auth);
+        let map = null; // Pembolehubah global untuk peta
+        let geojson_data = null; // Untuk menyimpan data GeoJSON penuh
+        let currentLayer = null;
+        let highlightLayer = null;
+        
+        // Fungsi untuk memanggil Cloud Function
+        const analyzeShpData = httpsCallable(functions, 'analyzeShpData');
 
-        loginButton.addEventListener('click', signIn);
-        logoutButton.addEventListener('click', signOutUser);
 
-        onAuthStateChanged(auth, user => {
+        // Pantau status log masuk pengguna
+        onAuthStateChanged(auth, (user) => {
             if (user) {
-                loginView.style.display = 'none';
-                appView.style.display = 'flex';
-                userDisplayName.textContent = user.displayName || user.email;
-                if (!window.mapInstance) {
+                // Pengguna telah log masuk
+                loginContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                userDisplay.textContent = `Selamat Datang, ${user.displayName}!`;
+                statusBar.textContent = "Sedia. Sila muat naik fail Shapefile.";
+                if (!map) {
                     initializeMapAndApp();
                 }
             } else {
-                loginView.style.display = 'flex';
-                appView.style.display = 'none';
-                userDisplayName.textContent = '';
-                if (window.mapInstance) {
-                    window.mapInstance.remove();
-                    window.mapInstance = null;
+                // Pengguna telah log keluar
+                loginContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                statusBar.textContent = "Sila log masuk untuk memulakan.";
+                if (map) {
+                    map.remove();
+                    map = null;
                 }
             }
         });
 
+        // Logik untuk butang log masuk & log keluar
+        loginBtn.addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(error => console.error("Login Error:", error));
+        });
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth).catch(error => console.error("Logout Error:", error));
+        });
+
+        // Fungsi utama yang hanya berjalan selepas log masuk
         function initializeMapAndApp() {
-            const map = L.map('map').setView([4.2105, 101.9758], 7);
-            window.mapInstance = map; // Store instance globally
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+            map = L.map('map').setView([4.2105, 101.9758], 7);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
 
-            const loader = document.getElementById('loader');
-            const statusMessage = document.getElementById('status-message');
-            const queryPanel = document.getElementById('query-panel');
-            const fieldSelect = document.getElementById('field-select');
-            const operatorSelect = document.getElementById('operator-select');
-            const queryInput = document.getElementById('query-input');
-            const queryButton = document.getElementById('query-button');
-            const clearButton = document.getElementById('clear-button');
-            const resultsCount = document.getElementById('results-count');
-            const resultsList = document.getElementById('results-list');
             const fileInput = document.getElementById('shp-file-input');
-            fileInput.disabled = false;
-            statusMessage.textContent = 'Sila pilih fail .zip Shapefile.';
-
-            let currentLayer = null, highlightLayer = null, geojson_data = null, searchResults = [];
-            const highlightStyle = { color: 'var(--highlight-color)', weight: 5, opacity: 1, fillOpacity: 0.7 };
+            const queryBtn = document.getElementById('query-btn');
+            const askAiBtn = document.getElementById('ask-ai-btn');
 
             fileInput.addEventListener('change', handleFile);
-            queryButton.addEventListener('click', executeQuery);
-            clearButton.addEventListener('click', () => clearQueryResults(false));
+            queryBtn.addEventListener('click', executeQuery);
+            askAiBtn.addEventListener('click', handleAiQuery);
+        }
 
-            function handleFile(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                loader.style.display = 'flex';
-                setStatus('Memproses fail...', 'info');
-                clearQueryResults();
-                queryPanel.style.display = 'none';
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-                const reader = new FileReader();
-                reader.onload = e => {
-                    if (currentLayer) map.removeLayer(currentLayer);
-                    shp.parseZip(e.target.result).then(geojson => {
-                        loader.style.display = 'none';
-                        setStatus(`Berjaya memuat naik: ${file.name}`, 'success');
-                        geojson_data = geojson;
-                        currentLayer = L.geoJSON(geojson, { onEachFeature: onEachFeaturePopup }).addTo(map);
-                        if (currentLayer.getBounds().isValid()) map.fitBounds(currentLayer.getBounds());
-                        populateFieldSelect(geojson);
-                        queryPanel.style.display = 'block';
-                    }).catch(err => handleError('Gagal memproses fail. Pastikan ia .zip Shapefile yang sah.'));
-                };
-                reader.readAsArrayBuffer(file);
-            }
+            statusBar.textContent = `Memproses fail: ${file.name}...`;
+            const reader = new FileReader();
 
-            function onEachFeaturePopup(feature, layer) {
-                if (feature.properties) {
-                    let popupContent = '<table>';
-                    for (const key in feature.properties) popupContent += `<tr><th>${key}</th><td>${feature.properties[key]}</td></tr>`;
-                    layer.bindPopup(popupContent + '</table>');
-                }
-            }
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+                clearAllLayers();
 
-            function populateFieldSelect(geojson) {
-                fieldSelect.innerHTML = '';
-                if (geojson.features && geojson.features.length > 0) {
-                    const properties = geojson.features[0].properties;
-                    for (const key in properties) {
-                        const option = document.createElement('option');
-                        option.value = key; option.textContent = key;
-                        fieldSelect.appendChild(option);
+                shp.parseZip(arrayBuffer).then(geojson => {
+                    geojson_data = geojson; // Simpan data penuh
+                    currentLayer = L.geoJSON(geojson, { onEachFeature: onEachFeature }).addTo(map);
+                    
+                    if (currentLayer.getBounds().isValid()) {
+                        map.fitBounds(currentLayer.getBounds());
                     }
-                }
-            }
-
-            function executeQuery() {
-                const field = fieldSelect.value, operator = operatorSelect.value, value = queryInput.value.trim().toLowerCase();
-                if (!field || !value) return alert('Sila pilih field dan masukkan nilai carian.');
-                searchResults = geojson_data.features.filter(f => {
-                    const propVal = f.properties && f.properties[field] != null ? String(f.properties[field]).toLowerCase() : null;
-                    if (propVal === null) return false;
-                    return operator === 'equal' ? propVal === value : propVal.includes(value);
+                    populateFieldSelect(geojson);
+                    document.getElementById('query-panel').classList.remove('hidden');
+                    document.getElementById('ai-panel').classList.remove('hidden');
+                    statusBar.textContent = `Fail ${file.name} berjaya dimuatkan.`;
+                }).catch(error => {
+                    console.error('Ralat memproses Shapefile:', error);
+                    statusBar.textContent = "Gagal memproses fail .zip. Sila pastikan ia adalah Shapefile yang sah.";
                 });
-                displayQueryResults();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function onEachFeature(feature, layer) {
+            if (feature.properties) {
+                let popupContent = '<div style="max-height: 200px; overflow-y: auto;"><table>';
+                for (const key in feature.properties) {
+                    popupContent += `<tr><th>${key}</th><td>${feature.properties[key]}</td></tr>`;
+                }
+                popupContent += '</table></div>';
+                layer.bindPopup(popupContent);
+            }
+        }
+        
+        function handleAiQuery() {
+            const userQuery = document.getElementById('ai-question').value;
+            const aiAnswerDiv = document.getElementById('ai-answer');
+
+            if (!userQuery.trim()) {
+                aiAnswerDiv.textContent = "Sila masukkan soalan anda.";
+                return;
+            }
+            if (!geojson_data || !geojson_data.features || geojson_data.features.length === 0) {
+                aiAnswerDiv.textContent = "Sila muat naik fail Shapefile terlebih dahulu.";
+                return;
             }
 
-            function displayQueryResults() {
-                clearQueryResults(true);
-                resultsCount.textContent = `Ditemui ${searchResults.length} hasil.`;
-                if (searchResults.length > 0) {
-                    highlightLayer = L.geoJSON({ type: "FeatureCollection", features: searchResults }, { style: highlightStyle, onEachFeature: onEachFeaturePopup }).addTo(map);
-                    searchResults.forEach(feature => {
-                        const li = document.createElement('li');
-                        li.className = 'result-item';
-                        const displayField = fieldSelect.value || Object.keys(feature.properties)[0];
-                        li.textContent = feature.properties[displayField] || 'Tiada data';
-                        li.addEventListener('click', () => map.flyToBounds(L.geoJSON(feature).getBounds(), { padding: [50, 50] }));
-                        resultsList.appendChild(li);
-                    });
+            aiAnswerDiv.textContent = "Berfikir...";
+            
+            // Hantar hanya sampel data (cth: atribut 5 ciri pertama) untuk menjimatkan token
+            const sampleProperties = geojson_data.features.slice(0, 5).map(f => f.properties);
+            
+            const payload = {
+                query: userQuery,
+                contextData: sampleProperties
+            };
+
+            // Panggil Cloud Function
+            analyzeShpData(payload)
+                .then((result) => {
+                    const answer = result.data.answer;
+                    aiAnswerDiv.textContent = answer;
+                })
+                .catch((error) => {
+                    console.error("Ralat memanggil Cloud Function:", error);
+                    aiAnswerDiv.textContent = `Maaf, berlaku ralat: ${error.message}`;
+                });
+        }
+
+
+        function populateFieldSelect(geojson) {
+            const fieldSelect = document.getElementById('field-select');
+            fieldSelect.innerHTML = '';
+            if (geojson.features.length > 0) {
+                const properties = geojson.features[0].properties;
+                for (const key in properties) {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = key;
+                    fieldSelect.appendChild(option);
                 }
             }
+        }
 
-            function clearQueryResults(keepData = false) {
-                if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
-                resultsList.innerHTML = '';
-                if (!keepData) { searchResults = []; queryInput.value = ''; }
-                resultsCount.textContent = 'Tiada hasil.';
+        function executeQuery() {
+            clearQueryResults();
+            if (!geojson_data) return;
+
+            const field = document.getElementById('field-select').value;
+            const operator = document.getElementById('operator-select').value;
+            const value = document.getElementById('query-value').value.toLowerCase();
+
+            const searchResults = geojson_data.features.filter(feature => {
+                const propValue = String(feature.properties[field]).toLowerCase();
+                if (operator === 'equal') {
+                    return propValue === value;
+                } else if (operator === 'like') {
+                    return propValue.includes(value);
+                }
+                return false;
+            });
+            displayQueryResults(searchResults);
+        }
+
+        function displayQueryResults(results) {
+            const resultsCount = document.getElementById('results-count');
+            const resultsList = document.getElementById('results-list');
+            const resultsContainer = document.getElementById('results-container');
+            
+            resultsCount.textContent = `${results.length} hasil ditemui.`;
+            results.forEach(feature => {
+                const li = document.createElement('li');
+                const displayField = document.getElementById('field-select').value;
+                li.textContent = `${displayField}: ${feature.properties[displayField]}`;
+                li.onclick = () => {
+                    const layer = L.geoJSON(feature);
+                    map.flyToBounds(layer.getBounds(), { maxZoom: 18 });
+                };
+                resultsList.appendChild(li);
+            });
+
+            if (results.length > 0) {
+                highlightLayer = L.geoJSON(results, {
+                    style: { color: "#ff0000", weight: 3, opacity: 0.8 }
+                }).addTo(map);
+                resultsContainer.classList.remove('hidden');
             }
+        }
 
-            function setStatus(message, type) { statusMessage.textContent = message; statusMessage.className = `status-${type}`; }
-            function handleError(message) { loader.style.display = 'none'; console.error(message); setStatus(message, 'error'); }
+        function clearAllLayers() {
+            if (currentLayer) map.removeLayer(currentLayer);
+            if (highlightLayer) map.removeLayer(highlightLayer);
+            geojson_data = null;
+            currentLayer = null;
+            highlightLayer = null;
+            clearQueryResults();
+            document.getElementById('query-panel').classList.add('hidden');
+            document.getElementById('results-container').classList.add('hidden');
+            document.getElementById('ai-panel').classList.add('hidden');
+        }
+
+        function clearQueryResults() {
+            if (highlightLayer) map.removeLayer(highlightLayer);
+            document.getElementById('results-count').textContent = 'Tiada hasil ditemui.';
+            document.getElementById('results-list').innerHTML = '';
+            document.getElementById('results-container').classList.add('hidden');
         }
     </script>
+
 </body>
 </html>
