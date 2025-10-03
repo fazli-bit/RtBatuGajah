@@ -27,6 +27,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             display: flex;
             overflow: hidden;
+            background-color: var(--light-gray);
         }
         #login-container {
             width: 100%;
@@ -34,17 +35,19 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
         }
         #app-container {
             display: flex;
             width: 100%;
             height: 100%;
         }
+        .hidden {
+            display: none !important;
+        }
         #sidebar {
             width: var(--sidebar-width);
             height: 100%;
-            background-color: var(--light-gray);
+            background-color: #ffffff;
             border-right: 1px solid var(--border-color);
             padding: 15px;
             box-sizing: border-box;
@@ -114,9 +117,10 @@
             cursor: pointer;
             width: 100%;
             margin-top: 10px;
+            transition: background-color 0.2s;
         }
         button:hover {
-            opacity: 0.9;
+            background-color: #0056b3;
         }
         input, select, textarea {
             width: 100%;
@@ -130,19 +134,31 @@
             margin-top: auto;
             background-color: var(--secondary-color);
         }
+        #logout-btn:hover {
+            background-color: #5a6268;
+        }
+        .version-text {
+            font-size: 0.8em;
+            color: var(--secondary-color);
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
 
     <div id="login-container">
-        <h1>GIS Analyzer dengan AI</h1>
-        <p>Sila log masuk untuk meneruskan</p>
-        <button id="login-btn" style="width: 200px;">Log Masuk dengan Google</button>
+        <div class="panel" style="width: 400px; text-align: center;">
+            <h2>GIS Analyzer dengan AI</h2>
+            <p>Sila log masuk untuk meneruskan</p>
+            <button id="login-btn" style="width: 250px;">Log Masuk dengan Google</button>
+            <p id="version-display-login" class="version-text"></p>
+        </div>
     </div>
 
     <div id="app-container" class="hidden">
         <div id="sidebar">
-            <h2 id="user-display"></h2>
+            <h3 id="user-display" style="text-align: center; word-break: break-all;"></h3>
+            <p id="version-display-sidebar" class="version-text" style="text-align: center; margin-top: -10px; margin-bottom: 10px;"></p>
             
             <div id="ai-panel" class="panel hidden">
                 <h3>1. Analisis AI (Gemini)</h3>
@@ -185,12 +201,12 @@
     </div>
 
     <script type="module">
-        // Import pustaka Firebase yang diperlukan
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
 
-        // Konfigurasi Firebase anda
+        const APP_VERSION = "1.2.1";
+
         const firebaseConfig = {
             apiKey: "AIzaSyCFvfVIiXlKbgmrhzUoC7sH9birM3jFoVM",
             authDomain: "gisdata-2206c.firebaseapp.com",
@@ -200,13 +216,11 @@
             appId: "1:854261474877:web:c0baf1bd22b694b333ac54"
         };
 
-        // Inisialisasi Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const functions = getFunctions(app);
         const provider = new GoogleAuthProvider();
 
-        // Rujukan kepada elemen UI
         const loginContainer = document.getElementById('login-container');
         const appContainer = document.getElementById('app-container');
         const loginBtn = document.getElementById('login-btn');
@@ -214,19 +228,20 @@
         const userDisplay = document.getElementById('user-display');
         const statusBar = document.getElementById('status-bar');
 
-        let map = null; // Pembolehubah global untuk peta
-        let geojson_data = null; // Untuk menyimpan data GeoJSON penuh
+        let map = null;
+        let geojson_data = null;
         let currentLayer = null;
         let highlightLayer = null;
         
-        // Fungsi untuk memanggil Cloud Function
         const analyzeShpData = httpsCallable(functions, 'analyzeShpData');
 
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('version-display-login').textContent = `Versi ${APP_VERSION}`;
+            document.getElementById('version-display-sidebar').textContent = `Versi ${APP_VERSION}`;
+        });
 
-        // Pantau status log masuk pengguna
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Pengguna telah log masuk
                 loginContainer.classList.add('hidden');
                 appContainer.classList.remove('hidden');
                 userDisplay.textContent = `Selamat Datang, ${user.displayName}!`;
@@ -234,8 +249,8 @@
                 if (!map) {
                     initializeMapAndApp();
                 }
+                updateMapSize();
             } else {
-                // Pengguna telah log keluar
                 loginContainer.classList.remove('hidden');
                 appContainer.classList.add('hidden');
                 statusBar.textContent = "Sila log masuk untuk memulakan.";
@@ -246,21 +261,37 @@
             }
         });
 
-        // Logik untuk butang log masuk & log keluar
         loginBtn.addEventListener('click', () => {
             signInWithPopup(auth, provider).catch(error => console.error("Login Error:", error));
         });
+
         logoutBtn.addEventListener('click', () => {
             signOut(auth).catch(error => console.error("Logout Error:", error));
         });
 
-        // Fungsi utama yang hanya berjalan selepas log masuk
+        // PENAMBAHAN: Fungsi khas untuk mengemas kini saiz peta
+        function updateMapSize() {
+            if (map) {
+                // Delay untuk pastikan container visible dan DOM telah render sepenuhnya
+                setTimeout(() => {
+                    map.invalidateSize(true); // true = pan to center
+                }, 200);
+            }
+        }
+
         function initializeMapAndApp() {
             map = L.map('map').setView([4.2105, 101.9758], 7);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(map);
+            
+            // PENAMBAHAN: Jadikan peta responsif kepada saiz tetingkap
+            window.addEventListener('resize', () => {
+                if (map) {
+                    map.invalidateSize();
+                }
+            });
 
             const fileInput = document.getElementById('shp-file-input');
             const queryBtn = document.getElementById('query-btn');
@@ -283,7 +314,7 @@
                 clearAllLayers();
 
                 shp.parseZip(arrayBuffer).then(geojson => {
-                    geojson_data = geojson; // Simpan data penuh
+                    geojson_data = geojson;
                     currentLayer = L.geoJSON(geojson, { onEachFeature: onEachFeature }).addTo(map);
                     
                     if (currentLayer.getBounds().isValid()) {
@@ -305,7 +336,7 @@
             if (feature.properties) {
                 let popupContent = '<div style="max-height: 200px; overflow-y: auto;"><table>';
                 for (const key in feature.properties) {
-                    popupContent += `<tr><th>${key}</th><td>${feature.properties[key]}</td></tr>`;
+                    popupContent += `<tr><th style="text-align: left; padding-right: 10px;">${key}</th><td>${feature.properties[key]}</td></tr>`;
                 }
                 popupContent += '</table></div>';
                 layer.bindPopup(popupContent);
@@ -327,7 +358,6 @@
 
             aiAnswerDiv.textContent = "Berfikir...";
             
-            // Hantar hanya sampel data (cth: atribut 5 ciri pertama) untuk menjimatkan token
             const sampleProperties = geojson_data.features.slice(0, 5).map(f => f.properties);
             
             const payload = {
@@ -335,7 +365,6 @@
                 contextData: sampleProperties
             };
 
-            // Panggil Cloud Function
             analyzeShpData(payload)
                 .then((result) => {
                     const answer = result.data.answer;
@@ -346,7 +375,6 @@
                     aiAnswerDiv.textContent = `Maaf, berlaku ralat: ${error.message}`;
                 });
         }
-
 
         function populateFieldSelect(geojson) {
             const fieldSelect = document.getElementById('field-select');
@@ -429,3 +457,4 @@
 
 </body>
 </html>
+
