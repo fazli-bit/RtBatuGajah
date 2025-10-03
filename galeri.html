@@ -18,48 +18,80 @@
         body { margin: 0; font-family: 'Inter', sans-serif; background-color: #000; color: white; overflow: hidden; }
         canvas { display: block; }
         #blocker { position: absolute; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; text-align: center; z-index: 10; }
-        #instructions { width: 50%; cursor: pointer; padding: 20px; background-color: #111827; border-radius: 10px; border: 1px solid #374151; }
+        #instructions { width: 80%; max-width: 500px; cursor: pointer; padding: 20px; background-color: #111827; border-radius: 10px; border: 1px solid #374151; }
         #crosshair { display: none !important; }
         #artwork-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100; }
         .modal-content { max-width: 80vw; max-height: 80vh; background-color: #fefefe; padding: 20px; border-radius: 8px; text-align: center; color: black; }
         .modal-content img { max-width: 100%; max-height: 70vh; object-fit: contain; margin-bottom: 15px; }
         #close-modal { position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+        
+        /* NEW: Landscape warning for mobile */
+        #landscape-warning { display: none; }
+        @media screen and (max-width: 1024px) and (orientation: portrait) {
+            #landscape-warning {
+                position: fixed;
+                inset: 0;
+                background-color: #111827;
+                z-index: 200;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+            #app-container { display: none; }
+        }
     </style>
 </head>
 <body>
-    <div id="blocker">
-        <div id="instructions">
-            <h1 class="text-3xl font-bold mb-4">Selamat Datang ke Galeri Digital</h1>
-            <p class="text-lg">Klik untuk masuk</p>
-            <br>
-            <p>Guna ▲/▼ untuk bergerak ke depan/belakang</p>
-            <p>Guna ◀/▶ untuk berpusing 90 darjah</p>
-            <p>Klik Kanan atau 'Esc' untuk kembali dari paparan karya</p>
+    <!-- NEW: Container for the main app -->
+    <div id="app-container">
+        <div id="blocker">
+            <div id="instructions">
+                <h1 class="text-3xl font-bold mb-4">Selamat Datang ke Galeri Digital</h1>
+                <p class="text-lg mb-4">Klik untuk masuk</p>
+                <div class="text-sm text-gray-300">
+                    <p>Guna ▲/▼ untuk bergerak ke depan/belakang</p>
+                    <p>Guna ◀/▶ untuk berpusing 90 darjah</p>
+                    <p>Klik Kanan atau 'Esc' untuk kembali dari paparan karya</p>
+                    <p class="mt-2 md:hidden">Untuk pengalaman terbaik, gunakan mod landskap.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Fullscreen Button -->
+        <button id="fullscreen-btn" class="fixed top-5 right-5 z-20 bg-gray-500 bg-opacity-50 text-white p-3 rounded-full active:bg-opacity-75 select-none" title="Skrin Penuh">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+
+        <div id="artwork-modal">
+            <span id="close-modal">&times;</span>
+            <div class="modal-content">
+                <img id="modal-img" src="" alt="Karya seni dipaparkan penuh">
+                <h2 id="modal-title" class="text-2xl font-bold"></h2>
+                <p id="modal-artist" class="text-lg text-gray-600"></p>
+            </div>
+        </div>
+
+        <div id="mobile-controls" class="fixed bottom-5 w-full flex justify-between items-end px-5 z-20 hidden">
+            <div class="flex flex-col items-center gap-4">
+                <button id="mobile-up" class="bg-gray-500 bg-opacity-50 text-white w-16 h-16 rounded-full text-2xl active:bg-opacity-75 select-none">▲</button>
+                <button id="mobile-down" class="bg-gray-500 bg-opacity-50 text-white w-16 h-16 rounded-full text-2xl active:bg-opacity-75 select-none">▼</button>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="mobile-left" class="bg-gray-500 bg-opacity-50 text-white w-16 h-16 rounded-full text-2xl active:bg-opacity-75 select-none">◀</button>
+                <button id="mobile-right" class="bg-gray-500 bg-opacity-50 text-white w-16 h-16 rounded-full text-2xl active:bg-opacity-75 select-none">▶</button>
+            </div>
         </div>
     </div>
-
-    <div id="crosshair"></div>
-
-    <div id="artwork-modal">
-        <span id="close-modal">&times;</span>
-        <div class="modal-content">
-            <img id="modal-img" src="" alt="Karya seni dipaparkan penuh">
-            <h2 id="modal-title" class="text-2xl font-bold"></h2>
-            <p id="modal-artist" class="text-lg text-gray-600"></p>
-        </div>
+    
+    <!-- NEW: Landscape Warning Screen -->
+    <div id="landscape-warning">
+         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white mb-4"><path d="M21.73 12a2.24 2.24 0 0 0-1-1.73l-7-4a2.23 2.23 0 0 0-2.54 0l-7 4A2.24 2.24 0 0 0 3 12v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="m2 10 10 6 10-6"/><path d="m22 12-10 6-10-6"/></svg>
+        <h2 class="text-2xl font-bold">Mod Landskap Diperlukan</h2>
+        <p class="text-lg mt-2">Sila putarkan peranti anda untuk pengalaman terbaik.</p>
     </div>
 
-    <!-- NEW: Mobile Controls -->
-    <div id="mobile-controls" class="fixed bottom-5 w-full justify-center items-center z-20 hidden">
-        <div class="grid grid-cols-3 gap-4 w-48 sm:w-64">
-            <div></div> <!-- Spacer -->
-            <button id="mobile-up" class="bg-gray-500 bg-opacity-50 text-white p-4 rounded-full text-2xl active:bg-opacity-75 select-none">▲</button>
-            <div></div> <!-- Spacer -->
-            <button id="mobile-left" class="bg-gray-500 bg-opacity-50 text-white p-4 rounded-full text-2xl active:bg-opacity-75 select-none">◀</button>
-            <button id="mobile-down" class="bg-gray-500 bg-opacity-50 text-white p-4 rounded-full text-2xl active:bg-opacity-75 select-none">▼</button>
-            <button id="mobile-right" class="bg-gray-500 bg-opacity-50 text-white p-4 rounded-full text-2xl active:bg-opacity-75 select-none">▶</button>
-        </div>
-    </div>
 
     <script type="module">
         import * as THREE from 'three';
@@ -79,19 +111,14 @@
         let isRotating = false;
         
         const artworks = [
-            // Dinding Depan (z=-39.9) - 3 karya
             { img: 'https://placehold.co/400x300/e74c3c/ffffff?text=Depan+1', title: 'Horizon Merah', artist: 'Artis A', position: new THREE.Vector3(-10, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
             { img: 'https://placehold.co/400x300/9b59b6/ffffff?text=Depan+2', title: 'Lembayung Senja', artist: 'Artis B', position: new THREE.Vector3(0, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
             { img: 'https://placehold.co/400x300/f1c40f/ffffff?text=Depan+3', title: 'Gurun Emas', artist: 'Artis C', position: new THREE.Vector3(10, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
-
-            // Dinding Kanan (x=14.9) - 6 karya
             { img: 'https://placehold.co/300x400/2ecc71/ffffff?text=Kanan+1', title: 'Rimba Tropika', artist: 'Artis D', position: new THREE.Vector3(14.9, 5, 25), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
             { img: 'https://placehold.co/300x400/34495e/ffffff?text=Kanan+2', title: 'Batu Granit', artist: 'Artis E', position: new THREE.Vector3(14.9, 5, 12), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
             { img: 'https://placehold.co/300x400/16a085/ffffff?text=Kanan+3', title: 'Permata Jade', artist: 'Artis F', position: new THREE.Vector3(14.9, 5, -1), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
             { img: 'https://placehold.co/300x400/f39c12/ffffff?text=Kanan+4', title: 'Mentari Terik', artist: 'Artis G', position: new THREE.Vector3(14.9, 5, -14), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
             { img: 'https://placehold.co/300x400/2980b9/ffffff?text=Kanan+5', title: 'Air Terjun', artist: 'Artis H', position: new THREE.Vector3(14.9, 5, -27), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            
-            // Dinding Kiri (x=-14.9) - 6 karya
             { img: 'https://placehold.co/300x400/3498db/ffffff?text=Kiri+1', title: 'Samudera Pasifik', artist: 'Artis I', position: new THREE.Vector3(-14.9, 5, 25), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
             { img: 'https://placehold.co/300x400/1abc9c/ffffff?text=Kiri+2', title: 'Lagun Firus', artist: 'Artis J', position: new THREE.Vector3(-14.9, 5, 12), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
             { img: 'https://placehold.co/300x400/8e44ad/ffffff?text=Kiri+3', title: 'Medan Asteroid', artist: 'Artis K', position: new THREE.Vector3(-14.9, 5, -1), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
@@ -156,7 +183,8 @@
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+            // Appended to the app-container, not body
+            document.getElementById('app-container').appendChild(renderer.domElement);
             
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             scene.add(ambientLight);
@@ -170,7 +198,6 @@
             createGalleryLayout();
             loadArtworks();
             
-            // NEW: Check for touch device and set up mobile controls
             if ('ontouchstart' in window) {
                 setupMobileControls();
             }
@@ -249,6 +276,12 @@
                 blocker.style.display = 'none';
                 gameActive = true;
             }, { once: true });
+            
+            // NEW: Fullscreen button listener
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', toggleFullScreen);
+            }
 
             const onKeyDown = (event) => {
                 if (event.code === 'Escape') {
@@ -296,58 +329,60 @@
             document.addEventListener('keydown', onKeyDown);
         }
 
-        // NEW: Function to set up mobile controls
         function setupMobileControls() {
             const controls = document.getElementById('mobile-controls');
-            controls.classList.remove('hidden');
-            controls.classList.add('flex');
-
             const up = document.getElementById('mobile-up');
             const down = document.getElementById('mobile-down');
             const left = document.getElementById('mobile-left');
             const right = document.getElementById('mobile-right');
+            
+            // FIX: Safety check to prevent crash if elements are not found
+            if (controls && up && down && left && right) {
+                controls.classList.remove('hidden');
+                controls.classList.add('flex');
 
-            const handleMove = (moveType) => {
-                if (!gameActive) return;
-                if (isRotating || camera.position.distanceTo(targetPosition) > 0.1) return;
-                
-                const normalizeAngle = (angle) => (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-                const viewDirection = normalizeAngle(targetRotationY);
+                const handleMove = (moveType) => {
+                    if (!gameActive) return;
+                    if (isRotating || camera.position.distanceTo(targetPosition) > 0.1) return;
+                    
+                    const normalizeAngle = (angle) => (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+                    const viewDirection = normalizeAngle(targetRotationY);
 
-                const facingForward = Math.abs(viewDirection) < 0.1 || Math.abs(viewDirection - 2*Math.PI) < 0.1;
-                const facingBackward = Math.abs(viewDirection - Math.PI) < 0.1;
+                    const facingForward = Math.abs(viewDirection) < 0.1 || Math.abs(viewDirection - 2*Math.PI) < 0.1;
+                    const facingBackward = Math.abs(viewDirection - Math.PI) < 0.1;
 
-                switch (moveType) {
-                    case 'up':
-                        if (currentPositionState === 1 && facingForward) {
-                            currentPositionState = 2;
-                            targetPosition.copy(position2);
-                        } else if (currentPositionState === 2 && facingBackward) {
-                            currentPositionState = 1;
-                            targetPosition.copy(position1);
-                        }
-                        break;
-                    case 'down':
-                        if (currentPositionState === 2 && facingForward) {
-                            currentPositionState = 1;
-                            targetPosition.copy(position1);
-                        }
-                        break;
-                    case 'left':
-                        targetRotationY += Math.PI / 2;
-                        isRotating = true;
-                        break;
-                    case 'right':
-                        targetRotationY -= Math.PI / 2;
-                        isRotating = true;
-                        break;
-                }
-            };
+                    switch (moveType) {
+                        case 'up':
+                            if (currentPositionState === 1 && facingForward) {
+                                currentPositionState = 2;
+                                targetPosition.copy(position2);
+                            } else if (currentPositionState === 2 && facingBackward) {
+                                currentPositionState = 1;
+                                targetPosition.copy(position1);
+                            }
+                            break;
+                        case 'down':
+                            if (currentPositionState === 2 && facingForward) {
+                                currentPositionState = 1;
+                                targetPosition.copy(position1);
+                            }
+                            break;
+                        case 'left':
+                            targetRotationY += Math.PI / 2;
+                            isRotating = true;
+                            break;
+                        case 'right':
+                            targetRotationY -= Math.PI / 2;
+                            isRotating = true;
+                            break;
+                    }
+                };
 
-            up.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('up'); });
-            down.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('down'); });
-            left.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('left'); });
-            right.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('right'); });
+                up.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('up'); });
+                down.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('down'); });
+                left.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('left'); });
+                right.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('right'); });
+            }
         }
 
 
@@ -377,7 +412,6 @@
         function onDocumentClick(event) {
             if (!gameActive) return;
             
-            // Allow tap on mobile, but use event for coordinates
             const touch = event.touches ? event.touches[0] : event;
 
             const mouse = new THREE.Vector2();
@@ -401,6 +435,19 @@
             event.preventDefault();
             if (document.getElementById('artwork-modal').style.display === 'flex') {
                 closeModal();
+            }
+        }
+
+        // NEW: Fullscreen function
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
             }
         }
         
