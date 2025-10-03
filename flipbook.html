@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Digital Flipbook</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #8B4513;
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem;
+        }
+        
+        /* Gaya buku sebagai satu halaman landskap */
+        .book {
+            position: relative;
+            width: 90vw;
+            height: 63.6vw; /* Nisbah A3 Landskap (lebar * 1/sqrt(2)) */
+            max-width: 850px;
+            max-height: 601px; 
+            perspective: 2500px;
+            cursor: pointer;
+            user-select: none; /* Elak teks dipilih semasa klik */
+        }
+        
+        /* Setiap kertas kini 100% lebar buku */
+        .paper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform-style: preserve-3d;
+            /* FIX: Paksi pusingan diubah ke kiri untuk bukaan buku standard */
+            transform-origin: left center; 
+            transition: transform 0.6s ease-in-out;
+        }
+
+        .paper.flipped {
+            /* FIX: Nilai putaran diubah untuk selak ke arah yang betul */
+            transform: rotateY(-180deg);
+        }
+
+        .front,
+        .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            backface-visibility: hidden;
+            background-color: #fdfaf3;
+            border: 1px solid #e0dccc;
+            border-radius: 10px;
+        }
+        
+        .back {
+            transform: rotateY(180deg);
+        }
+
+        /* Padding dikecilkan */
+        .front-content,
+        .back-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0.5rem; /* Padding lebih kecil */
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .page-text {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            color: #6d6d6d;
+            margin-top: 0.5rem;
+        }
+        
+        .placeholder-image {
+            width: 95%;
+            height: 85%;
+            background-color: #e0dccc;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: zoom-in; /* Tunjuk imej boleh diklik */
+        }
+
+        .cover-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        
+        /* Mengawal kedudukan lapisan (stacking) kertas */
+        #p1 { z-index: 16; } #p2 { z-index: 15; } #p3 { z-index: 14; } #p4 { z-index: 13; }
+        #p5 { z-index: 12; } #p6 { z-index: 11; } #p7 { z-index: 10; } #p8 { z-index: 9; }
+        #p9 { z-index: 8; } #p10 { z-index: 7; } #p11 { z-index: 6; } #p12 { z-index: 5; }
+        #p13 { z-index: 4; } #p14 { z-index: 3; } #p15 { z-index: 2; } #p16 { z-index: 1; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Buku -->
+        <div class="book" id="book">
+            <!-- Terdapat 16 kertas untuk 16 halaman landskap -->
+            <div id="p1" class="paper">
+                <div class="front"><div class="front-content" style="padding:0;"><img src="img/depan.jpg" alt="Muka Depan" class="cover-image"></div></div>
+                <div class="back"><div class="back-content"><p class="page-text">Belakang Muka Depan (Kosong)</p></div></div>
+            </div>
+            <div id="p2" class="paper">
+                <div class="front"><div class="front-content"><img src="img/gambar_1.jpg" alt="Halaman 1" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 1</p></div></div>
+                <div class="back"><div class="back-content"><img src="img/gambar_2.jpg" alt="Halaman 2" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 2</p></div></div>
+            </div>
+             <div id="p3" class="paper">
+                <div class="front"><div class="front-content"><img src="img/gambar_3.jpg" alt="Halaman 3" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 3</p></div></div>
+                <div class="back"><div class="back-content"><img src="img/gambar_4.jpg" alt="Halaman 4" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 4</p></div></div>
+            </div>
+            <!-- Teruskan corak ini untuk halaman seterusnya -->
+            <div id="p4" class="paper"><div class="front"><div class="front-content"><img src="img/gambar_5.jpg" alt="Halaman 5" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 5</p></div></div><div class="back"><div class="back-content"><img src="img/gambar_6.jpg" alt="Halaman 6" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 6</p></div></div></div>
+            <div id="p5" class="paper"><div class="front"><div class="front-content"><img src="img/gambar_7.jpg" alt="Halaman 7" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 7</p></div></div><div class="back"><div class="back-content"><img src="img/gambar_8.jpg" alt="Halaman 8" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 8</p></div></div></div>
+            <div id="p6" class="paper"><div class="front"><div class="front-content"><img src="img/gambar_9.jpg" alt="Halaman 9" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 9</p></div></div><div class="back"><div class="back-content"><img src="img/gambar_10.jpg" alt="Halaman 10" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 10</p></div></div></div>
+            <div id="p7" class="paper"><div class="front"><div class="front-content"><img src="img/gambar_11.jpg" alt="Halaman 11" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 11</p></div></div><div class="back"><div class="back-content"><img src="img/gambar_12.jpg" alt="Halaman 12" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 12</p></div></div></div>
+            <div id="p8" class="paper"><div class="front"><div class="front-content"><img src="img/gambar_13.jpg" alt="Halaman 13" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 13</p></div></div><div class="back"><div class="back-content"><img src="img/gambar_14.jpg" alt="Halaman 14" class="placeholder-image fullscreen-trigger"><p class="page-text">Halaman 14</p></div></div></div>
+            <!-- ... Tambah lagi jika perlu ... -->
+            <div id="p16" class="paper">
+                <div class="front"><div class="front-content"><p class="page-text">Muka Dalam Belakang (Kosong)</p></div></div>
+                <div class="back"><div class="back-content" style="padding:0;"><img src="img/belakang.jpg" alt="Muka Belakang" class="cover-image"></div></div>
+            </div>
+        </div>
+
+        <!-- Butang Navigasi -->
+        <div class="flex items-center space-x-4">
+            <button id="prev-btn" class="px-4 py-2 bg-white/80 text-gray-800 font-semibold rounded-lg shadow-lg hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-transform transform hover:scale-105">
+                Sebelumnya
+            </button>
+            <button id="home-btn" class="p-3 bg-white/80 text-gray-800 font-semibold rounded-full shadow-lg hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-transform transform hover:scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 L 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </button>
+            <button id="next-btn" class="px-4 py-2 bg-white/80 text-gray-800 font-semibold rounded-lg shadow-lg hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-transform transform hover:scale-105">
+                Seterusnya
+            </button>
+        </div>
+    </div>
+    
+    <!-- FIX: Paparan Penuh Modal (gantian untuk Fullscreen API) -->
+    <div id="fullscreen-overlay" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer">
+        <img id="fullscreen-image" src="" alt="Fullscreen Image" class="max-w-full max-h-full object-contain">
+        <button id="close-fullscreen" class="absolute top-5 right-8 text-white text-5xl font-bold">&times;</button>
+    </div>
+
+
+    <script>
+        const book = document.getElementById('book');
+        const prevBtn = document.getElementById("prev-btn");
+        const nextBtn = document.getElementById("next-btn");
+        const homeBtn = document.getElementById("home-btn");
+        const papers = Array.from(document.querySelectorAll(".paper"));
+        
+        // Rujukan untuk elemen paparan penuh
+        const fullscreenOverlay = document.getElementById('fullscreen-overlay');
+        const fullscreenImage = document.getElementById('fullscreen-image');
+        const closeFullscreenBtn = document.getElementById('close-fullscreen');
+
+        const numPapers = papers.length;
+        const maxLocation = numPapers + 1;
+        let currentLocation = 1;
+
+        // --- EVENT LISTENERS ---
+        nextBtn.addEventListener("click", goNextPage);
+        prevBtn.addEventListener("click", goPrevPage);
+        homeBtn.addEventListener("click", goToFirstPage);
+        book.addEventListener('click', handleBookClick);
+        
+        // Event listener untuk menutup mod paparan penuh
+        closeFullscreenBtn.addEventListener('click', closeFullscreenModal);
+        fullscreenOverlay.addEventListener('click', (e) => {
+            if (e.target === fullscreenOverlay) { // Hanya tutup jika klik pada latar belakang
+                closeFullscreenModal();
+            }
+        });
+
+
+        // --- FUNGSI NAVIGASI ---
+        function goNextPage() {
+            if (currentLocation < maxLocation) {
+                papers[currentLocation - 1].classList.add("flipped");
+                papers[currentLocation - 1].style.zIndex = currentLocation;
+                currentLocation++;
+            }
+        }
+
+        function goPrevPage() {
+            if (currentLocation > 1) {
+                currentLocation--;
+                papers[currentLocation - 1].classList.remove("flipped");
+                papers[currentLocation - 1].style.zIndex = numPapers - (currentLocation - 1);
+            }
+        }
+
+        function goToFirstPage() {
+            currentLocation = 1;
+            papers.forEach((paper, index) => {
+                paper.classList.remove("flipped");
+                paper.style.zIndex = numPapers - index;
+            });
+        }
+
+        // --- FUNGSI INTERAKTIF ---
+        function handleBookClick(e) {
+            // Fungsi Skrin Penuh
+            if (e.target.classList.contains('fullscreen-trigger')) {
+                openFullscreenModal(e.target.src);
+                return; // Hentikan fungsi lain
+            }
+
+            // Fungsi Selak Halaman
+            const bookRect = book.getBoundingClientRect();
+            const clickX = e.clientX - bookRect.left;
+            
+            if (clickX > bookRect.width / 2) {
+                goNextPage();
+            } else {
+                goPrevPage();
+            }
+        }
+        
+        // FIX: Fungsi baru untuk membuka mod paparan penuh
+        function openFullscreenModal(src) {
+            fullscreenImage.src = src;
+            fullscreenOverlay.classList.remove('hidden');
+        }
+
+        // FIX: Fungsi baru untuk menutup mod paparan penuh
+        function closeFullscreenModal() {
+            fullscreenOverlay.classList.add('hidden');
+            fullscreenImage.src = ''; // Kosongkan src untuk elak paparan imej lama
+        }
+
+    </script>
+
+</body>
+</html>
+
