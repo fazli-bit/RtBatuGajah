@@ -25,12 +25,12 @@
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            display: flex;
             overflow: hidden;
             background-color: var(--light-gray);
         }
         #login-container {
             width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -46,6 +46,7 @@
         }
         #sidebar {
             width: var(--sidebar-width);
+            flex-shrink: 0;
             height: 100%;
             background-color: #ffffff;
             border-right: 1px solid var(--border-color);
@@ -205,7 +206,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
 
-        const APP_VERSION = "1.2.1";
+        const APP_VERSION = "1.3.1"; // Versi dikemas kini
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFvfVIiXlKbgmrhzUoC7sH9birM3jFoVM",
@@ -249,7 +250,9 @@
                 if (!map) {
                     initializeMapAndApp();
                 }
-                updateMapSize();
+                if (map) {
+                    map.invalidateSize();
+                }
             } else {
                 loginContainer.classList.remove('hidden');
                 appContainer.classList.add('hidden');
@@ -269,16 +272,6 @@
             signOut(auth).catch(error => console.error("Logout Error:", error));
         });
 
-        // PENAMBAHAN: Fungsi khas untuk mengemas kini saiz peta
-        function updateMapSize() {
-            if (map) {
-                // Delay untuk pastikan container visible dan DOM telah render sepenuhnya
-                setTimeout(() => {
-                    map.invalidateSize(true); // true = pan to center
-                }, 200);
-            }
-        }
-
         function initializeMapAndApp() {
             map = L.map('map').setView([4.2105, 101.9758], 7);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -286,7 +279,6 @@
                 attribution: '© OpenStreetMap'
             }).addTo(map);
             
-            // PENAMBAHAN: Jadikan peta responsif kepada saiz tetingkap
             window.addEventListener('resize', () => {
                 if (map) {
                     map.invalidateSize();
@@ -343,6 +335,7 @@
             }
         }
         
+        // FUNGSI DIKEMAS KINI DENGAN PEMBETULAN
         function handleAiQuery() {
             const userQuery = document.getElementById('ai-question').value;
             const aiAnswerDiv = document.getElementById('ai-answer');
@@ -358,11 +351,16 @@
 
             aiAnswerDiv.textContent = "Berfikir...";
             
-            const sampleProperties = geojson_data.features.slice(0, 5).map(f => f.properties);
+            const rawProperties = geojson_data.features.slice(0, 5).map(f => f.properties);
+            
+            // PEMBETULAN: Sanitasi data untuk membuang nilai yang tidak sah (seperti NaN)
+            // sebelum menghantarnya ke Cloud Function. JSON.stringify akan menukar NaN
+            // kepada null, dan JSON.parse akan mencipta semula objek yang bersih.
+            const cleanProperties = JSON.parse(JSON.stringify(rawProperties));
             
             const payload = {
                 query: userQuery,
-                contextData: sampleProperties
+                contextData: cleanProperties
             };
 
             analyzeShpData(payload)
