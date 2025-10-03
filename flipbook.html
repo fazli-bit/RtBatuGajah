@@ -1,10 +1,10 @@
-<!-- Flipbook App v2.1 - Corrected Landscape Page Orientation -->
+<!-- Flipbook App v2.3 - Animation Stacking Bug Fix -->
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Digital Flipbook v2.1</title>
+    <title>Interactive Digital Flipbook v2.3</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
@@ -31,11 +31,9 @@
             padding: 1rem;
         }
         
-        /* FIX: Saiz buku diubah untuk menghasilkan halaman landskap */
         .book {
             position: relative;
             width: 90vw;
-            /* Formula: (lebar buku / 2) / nisbah landskap (sqrt(2)) */
             height: 31.8vw; 
             max-width: 1200px;
             max-height: 424px; 
@@ -52,7 +50,6 @@
             transform-style: preserve-3d;
             transform-origin: left center; 
             transition: transform 0.6s ease-in-out;
-            cursor: pointer;
         }
 
         .paper.flipped {
@@ -69,6 +66,11 @@
             backface-visibility: hidden;
             background-color: #fdfaf3;
             border: 1px solid #e0dccc;
+        }
+        
+        .front-content,
+        .back-content {
+            cursor: pointer;
         }
 
         .paper .front {
@@ -188,13 +190,9 @@
 
         const numPapers = papers.length;
         let currentLocation = 0;
+        let isFlipping = false; // Add a lock to prevent rapid clicks
 
-        // Atur Z-Index Awal
-        papers.forEach((paper, index) => {
-            paper.style.zIndex = numPapers - index;
-        });
-
-        // Event Listeners
+        // --- Event Listeners ---
         nextBtn.addEventListener("click", goNextPage);
         prevBtn.addEventListener("click", goPrevPage);
         homeBtn.addEventListener("click", goToFirstPage);
@@ -206,25 +204,57 @@
                 closeFullscreenModal();
             }
         });
+        
+        // --- Initial Setup ---
+        goToFirstPage();
 
-        // Fungsi Navigasi
+
+        // --- FUNGSI NAVIGASI ---
         function goNextPage() {
-            if (currentLocation < numPapers) {
-                papers[currentLocation].classList.add("flipped");
-                papers[currentLocation].style.zIndex = currentLocation + 1;
-                currentLocation++;
-            }
+            if (isFlipping || currentLocation >= numPapers) return;
+            isFlipping = true;
+
+            const pageToFlip = papers[currentLocation];
+            
+            // FIX: Bring page to front for the animation duration
+            pageToFlip.style.zIndex = numPapers + 1;
+            pageToFlip.classList.add("flipped");
+            
+            currentLocation++;
+
+            // After animation, set its final z-index in the left stack
+            setTimeout(() => {
+                pageToFlip.style.zIndex = currentLocation;
+                isFlipping = false;
+            }, 600); // Must match CSS transition duration
         }
 
         function goPrevPage() {
-            if (currentLocation > 0) {
-                currentLocation--;
-                papers[currentLocation].classList.remove("flipped");
-                papers[currentLocation].style.zIndex = numPapers - currentLocation;
-            }
+            if (isFlipping || currentLocation <= 0) return;
+            isFlipping = true;
+
+            currentLocation--;
+            const pageToUnflip = papers[currentLocation];
+
+            // FIX: Bring page to front for the animation duration
+            pageToUnflip.style.zIndex = numPapers + 1;
+            pageToUnflip.classList.remove("flipped");
+
+            // After animation, reset z-index for ALL pages to maintain correct stack order
+            setTimeout(() => {
+                papers.forEach((paper, index) => {
+                    if (index < currentLocation) {
+                        paper.style.zIndex = index + 1;
+                    } else {
+                        paper.style.zIndex = numPapers - index;
+                    }
+                });
+                isFlipping = false;
+            }, 600);
         }
 
         function goToFirstPage() {
+            if (isFlipping) return;
             currentLocation = 0;
             papers.forEach((paper, index) => {
                 paper.classList.remove("flipped");
@@ -232,20 +262,22 @@
             });
         }
 
-        // Fungsi Interaktif
+        // --- FUNGSI INTERAKTIF ---
         function handleBookClick(e) {
+            if (isFlipping) return;
+
             if (e.target.classList.contains('fullscreen-trigger')) {
                 openFullscreenModal(e.target.src);
                 return;
             }
 
-            const targetPaper = e.target.closest('.paper');
-            if (!targetPaper) return;
-            
-            if (!targetPaper.classList.contains('flipped')) {
-                 goNextPage();
-            } else {
+            const bookRect = book.getBoundingClientRect();
+            const clickX = e.clientX - bookRect.left;
+
+            if (clickX < bookRect.width / 2) {
                 goPrevPage();
+            } else {
+                goNextPage();
             }
         }
         
