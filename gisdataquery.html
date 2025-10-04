@@ -204,9 +204,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
-
-        const APP_VERSION = "1.3.1"; // Versi dikemas kini
+        
+        const APP_VERSION = "1.4.0";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFvfVIiXlKbgmrhzUoC7sH9birM3jFoVM",
@@ -219,7 +218,6 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const functions = getFunctions(app);
         const provider = new GoogleAuthProvider();
 
         const loginContainer = document.getElementById('login-container');
@@ -233,8 +231,8 @@
         let geojson_data = null;
         let currentLayer = null;
         let highlightLayer = null;
-        
-        const analyzeShpData = httpsCallable(functions, 'analyzeShpData');
+
+        const analyzeShpDataUrl = "https://analyzeshpdata-3wcxhysw4q-ue.a.run.app";
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('version-display-login').textContent = `Versi ${APP_VERSION}`;
@@ -297,18 +295,13 @@
         function handleFile(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             statusBar.textContent = `Memproses fail: ${file.name}...`;
             const reader = new FileReader();
-
             reader.onload = function(e) {
-                const arrayBuffer = e.target.result;
-                clearAllLayers();
-
-                shp.parseZip(arrayBuffer).then(geojson => {
+                shp.parseZip(e.target.result).then(geojson => {
+                    clearAllLayers();
                     geojson_data = geojson;
                     currentLayer = L.geoJSON(geojson, { onEachFeature: onEachFeature }).addTo(map);
-                    
                     if (currentLayer.getBounds().isValid()) {
                         map.fitBounds(currentLayer.getBounds());
                     }
@@ -318,7 +311,7 @@
                     statusBar.textContent = `Fail ${file.name} berjaya dimuatkan.`;
                 }).catch(error => {
                     console.error('Ralat memproses Shapefile:', error);
-                    statusBar.textContent = "Gagal memproses fail .zip. Sila pastikan ia adalah Shapefile yang sah.";
+                    statusBar.textContent = "Gagal memproses fail .zip.";
                 });
             };
             reader.readAsArrayBuffer(file);
@@ -335,43 +328,57 @@
             }
         }
         
-        // FUNGSI DIKEMAS KINI DENGAN PEMBETULAN
-        function handleAiQuery() {
+        async function handleAiQuery() {
             const userQuery = document.getElementById('ai-question').value;
             const aiAnswerDiv = document.getElementById('ai-answer');
 
-            if (!userQuery.trim()) {
-                aiAnswerDiv.textContent = "Sila masukkan soalan anda.";
+            if (!userQuery.trim() || !geojson_data) {
+                aiAnswerDiv.textContent = "Sila muat naik fail dan masukkan soalan.";
                 return;
             }
-            if (!geojson_data || !geojson_data.features || geojson_data.features.length === 0) {
-                aiAnswerDiv.textContent = "Sila muat naik fail Shapefile terlebih dahulu.";
+
+            const currentUser = auth.currentUser;
+            if (!currentUser) {
+                aiAnswerDiv.textContent = "Sesi anda telah tamat. Sila log masuk semula.";
                 return;
             }
 
             aiAnswerDiv.textContent = "Berfikir...";
-            
-            const rawProperties = geojson_data.features.slice(0, 5).map(f => f.properties);
-            
-            // PEMBETULAN: Sanitasi data untuk membuang nilai yang tidak sah (seperti NaN)
-            // sebelum menghantarnya ke Cloud Function. JSON.stringify akan menukar NaN
-            // kepada null, dan JSON.parse akan mencipta semula objek yang bersih.
-            const cleanProperties = JSON.parse(JSON.stringify(rawProperties));
-            
-            const payload = {
-                query: userQuery,
-                contextData: cleanProperties
-            };
 
-            analyzeShpData(payload)
-                .then((result) => {
-                    const answer = result.data.answer;
-                    aiAnswerDiv.textContent = answer;
-                })
-                .catch((error) => {
-                    console.error("Ralat memanggil Cloud Function:", error);
-                    aiAnswerDiv.textContent = `Maaf, berlaku ralat: ${error.message}`;
+            try {
+                const idToken = await currentUser.getIdToken(true);
+                
+                const rawProperties = geojson_data.features.slice(0, 5).map(f => f.properties);
+                const cleanProperties = JSON.parse(JSON.stringify(rawProperties));
+                
+                const payload = {
+                    data: {
+                        query: userQuery,
+                        contextData: cleanProperties
+                    }
+                };
+
+                const response = await fetch(analyzeShpDataUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify(payload)
                 });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Ralat Pelayan: ${response.status}`);
+                }
+
+                const result = await response.json();
+                aiAnswerDiv.textContent = result.data.answer;
+
+            } catch (error) {
+                console.error("Ralat memanggil Cloud Function:", error);
+                aiAnswerDiv.textContent = `Maaf, berlaku ralat: ${error.message}`;
+            }
         }
 
         function populateFieldSelect(geojson) {
