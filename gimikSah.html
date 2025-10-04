@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Pengecaman Wajah</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@latest/dist/face-api.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.1.0/dist/tf-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.1.0/dist/tf-backend-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection@2.0.1/dist/hand-pose-detection.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
@@ -59,6 +59,7 @@
             height: 100%;
             transform: scaleX(-1); /* Invert video feed */
             object-fit: cover;
+            display: none; /* Hidden by default */
         }
         #overlay-canvas {
             position: absolute;
@@ -149,6 +150,10 @@
             transition: background-color 0.2s, transform 0.2s;
             color: white;
         }
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         .btn:active { transform: scale(0.98); }
         #register-btn { background-color: var(--primary-color); }
         #recognize-btn { background-color: var(--success-color); }
@@ -236,9 +241,6 @@
              position: relative;
              z-index: 1;
         }
-        #success-screen h1, #success-screen p {
-            opacity: 0;
-        }
         #success-screen h1 {
             font-size: 2.5rem;
             letter-spacing: 3px;
@@ -321,7 +323,7 @@
             <button id="back-btn" class="btn" style="background-color: var(--secondary-color);">Kembali ke Menu Utama</button>
         </div>
         <div id="status-message"></div>
-        <div id="version-info">versi 0.1</div>
+        <div id="version-info">versi 1.0.0</div>
     </div>
     <div id="success-screen">
         <canvas id="matrix-canvas"></canvas>
@@ -431,14 +433,21 @@
         progressBar.style.width = '0%';
     }
 
+    async function initializeAppFlow() {
+        registerBtn.disabled = true;
+        recognizeBtn.disabled = true;
+        await loadAllModels();
+        await loadRegisteredUsers();
+    }
 
-    async function loadModels(onComplete) {
+
+    async function loadAllModels(onComplete) {
         if (areModelsLoaded) {
             if (onComplete) onComplete();
             return;
         }
 
-        showLoadingBar('Memuatkan Model AI...', 2);
+        showLoadingBar('Memuatkan Model AI...', 3);
         
         try {
             await Promise.all([
@@ -450,7 +459,7 @@
             const model = handPoseDetection.SupportedModels.MediaPipeHands;
             const detectorConfig = {
               runtime: 'mediapipe',
-              solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands',
+              solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240',
               modelType: 'lite'
             };
             handDetector = await handPoseDetection.createDetector(model, detectorConfig);
@@ -459,7 +468,7 @@
             setTimeout(() => {
                 hideLoadingBar();
                 if (onComplete) onComplete();
-            }, 2000);
+            }, 3000);
 
         } catch (err) {
             console.error(err);
@@ -474,7 +483,7 @@
     }
 
     async function loadRegisteredUsers() {
-        statusMessage.innerText = 'Memuatkan data pengguna dari pangkalan data...';
+        statusMessage.innerText = 'Memuatkan data pengguna...';
         try {
             const querySnapshot = await getDocs(collection(db, "users"));
             const users = [];
@@ -494,12 +503,13 @@
                     new faceapi.LabeledFaceDescriptors(user.name, [user.descriptor])
                 );
                 faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
-                statusMessage.innerText = `${registeredUsers.length}/20 pengguna telah dimuatkan.`;
-                recognizeBtn.style.display = 'flex';
+                statusMessage.innerText = `Sistem Sedia.`;
+                recognizeBtn.disabled = false;
             } else {
                 statusMessage.innerText = 'Tiada pengguna didaftarkan. Sila daftar.';
                 recognizeBtn.style.display = 'none';
             }
+            registerBtn.disabled = false;
         } catch (e) {
             console.error("Error fetching users: ", e);
             showError("Gagal memuatkan data pengguna.");
@@ -509,11 +519,12 @@
     
     async function startCamera() {
         try {
-            if (stream) return true;
-            video.style.display = 'block';
+            if (stream) {
+                video.play();
+                return true;
+            };
             stream = await navigator.mediaDevices.getUserMedia({ video: true });
             video.srcObject = stream;
-            placeholder.style.display = 'none';
             return true;
         } catch (err) {
             showError("Tidak dapat mengakses kamera.");
@@ -526,6 +537,14 @@
             stream.getTracks().forEach(track => track.stop());
             stream = null;
         }
+    }
+    
+    function showVideoFeed() {
+        video.style.display = 'block';
+        placeholder.style.display = 'none';
+    }
+
+    function hideVideoFeed() {
         video.style.display = 'none';
         placeholder.style.display = 'flex';
     }
@@ -588,118 +607,99 @@
     }
 
     function startRecognition() {
-        loadModels(() => {
-            clearAllIntervals();
-            startCamera().then(success => {
-                if (!success) return;
-                statusMessage.innerText = "";
-                mainMenu.style.display = 'none';
-                recognitionControls.style.display = 'flex';
-                firstMatchTime = null;
-                lockedOnDescriptor = null;
+        clearAllIntervals();
+        startCamera().then(success => {
+            if (!success) return;
+            showVideoFeed();
+            statusMessage.innerText = "";
+            mainMenu.style.display = 'none';
+            recognitionControls.style.display = 'flex';
+            firstMatchTime = null;
 
-                const displaySize = { width: video.clientWidth, height: video.clientHeight };
-                faceapi.matchDimensions(overlayCanvas, displaySize);
+            const displaySize = { width: video.clientWidth, height: video.clientHeight };
+            faceapi.matchDimensions(overlayCanvas, displaySize);
 
-                detectionInterval = setInterval(async () => {
-                    const [faceDetections, hands] = await Promise.all([
-                        faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors(),
-                        handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
-                    ]);
-                    
-                    const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
-                    const context = overlayCanvas.getContext('2d');
-                    context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-                    
-                    let recognizedFaceResult = null;
-                    
-                    if (lockedOnDescriptor) {
-                        let bestMatchDist = 1;
-                        for (const detection of resizedDetections) {
-                            const dist = faceapi.euclideanDistance(lockedOnDescriptor, detection.descriptor);
-                            if (dist < 0.5 && dist < bestMatchDist) {
-                                bestMatchDist = dist;
-                                recognizedFaceResult = detection;
-                            }
-                        }
-                    } else {
-                        for (const detection of resizedDetections) {
-                            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-                            if (bestMatch.label !== 'unknown') {
-                                recognizedFaceResult = detection;
-                                break;
-                            }
-                        }
-                    }
+            detectionInterval = setInterval(async () => {
+                const [faceDetections, hands] = await Promise.all([
+                    faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors(),
+                    handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
+                ]);
+                
+                const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
+                const context = overlayCanvas.getContext('2d');
+                context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                
+                let recognizedFaceFoundThisFrame = false;
+                
+                if (resizedDetections.length > 0) {
+                    resizedDetections.forEach(detection => {
+                         if (detection.detection.score < 0.5) return;
 
-                    if (recognizedFaceResult) {
-                        const { flippedBox, bestMatch, score } = processDetection(recognizedFaceResult);
-                        new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
-
-                        if (firstMatchTime === null) firstMatchTime = Date.now();
+                        const { flippedBox, bestMatch, score } = processDetection(detection);
                         
-                        if (Date.now() - firstMatchTime < 1000) {
-                            drawMatrixText(context, "ID DISAHKAN...", flippedBox.x + flippedBox.width / 2 - 80, flippedBox.y + flippedBox.height / 2);
-                        } else {
-                            lockedOnDescriptor = recognizedFaceResult.descriptor;
-                            const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
-                            if (matchedUser) { // Safety check
+                        if (bestMatch.label !== 'unknown') {
+                            recognizedFaceFoundThisFrame = true;
+                            if (firstMatchTime === null) firstMatchTime = Date.now();
+                            new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
+                            if (Date.now() - firstMatchTime < 1000) {
+                                drawMatrixText(context, "ID DISAHKAN...", flippedBox.x + flippedBox.width / 2 - 80, flippedBox.y + flippedBox.height / 2);
+                            } else {
+                                const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
                                 drawMatrixInfo(context, flippedBox, matchedUser.name, matchedUser.position, score);
                             }
+                        } else {
+                            new faceapi.draw.DrawBox(flippedBox, { label: `Pengecaman... (${score.toFixed(2)})`, boxColor: 'rgba(255, 193, 7, 0.7)' }).draw(overlayCanvas);
+                        }
+                    });
+                }
+                
+                if (recognizedFaceFoundThisFrame && Date.now() - firstMatchTime >= 1000) {
+                    // Hand guide logic
+                    handGuideBox.style.display = 'flex';
+                    let handInPosition = false;
+                    const handGuideRect = handGuideBox.getBoundingClientRect();
+                    const videoRect = video.getBoundingClientRect();
+                    if (hands.length > 0) {
+                        hands.forEach(hand => {
+                            const wrist = hand.keypoints[0];
+                            const wristX = (wrist.x / video.videoWidth) * videoRect.width;
+                            const wristY = (wrist.y / video.videoHeight) * videoRect.height;
+                            const flippedWristX = videoRect.width - wristX;
 
-                            // Hand guide logic
-                            handGuideBox.style.display = 'flex';
-                            let handInPosition = false;
-                            const handGuideRect = handGuideBox.getBoundingClientRect();
-                            const videoRect = video.getBoundingClientRect();
-                            if (hands.length > 0) {
-                                hands.forEach(hand => {
-                                    const wrist = hand.keypoints[0];
-                                    const wristX = (wrist.x / video.videoWidth) * videoRect.width;
-                                    const wristY = (wrist.y / video.videoHeight) * videoRect.height;
-                                     const flippedWristX = videoRect.width - wristX;
-
-                                    if (flippedWristX > handGuideRect.left - videoRect.left && flippedWristX < handGuideRect.right - videoRect.left &&
-                                        wristY > handGuideRect.top - videoRect.top && wristY < handGuideRect.bottom - videoRect.top) {
-                                        handInPosition = true;
-                                    }
-                                });
+                            if (flippedWristX > handGuideRect.left - videoRect.left && flippedWristX < handGuideRect.right - videoRect.left &&
+                                wristY > handGuideRect.top - videoRect.top && wristY < handGuideRect.bottom - videoRect.top) {
+                                handInPosition = true;
                             }
-                            if (handInPosition) {
-                                if (!handGuideBox.classList.contains('detecting') && !handGuideBox.classList.contains('verified')) {
-                                    handGuideBox.classList.add('detecting');
-                                    handGuideText.textContent = "Pengesahan kedua...";
-                                    handVerificationTimer = setTimeout(() => {
-                                        handGuideBox.classList.remove('detecting');
-                                        handGuideBox.classList.add('verified');
-                                        handGuideText.textContent = "Pengesahan Berjaya";
-                                        setTimeout(showSuccessScreen, 500);
-                                    }, 2000);
-                                }
-                            } else {
-                                clearTimeout(handVerificationTimer);
-                                handVerificationTimer = null;
-                                handGuideBox.classList.remove('detecting', 'verified');
-                                handGuideText.textContent = 'Letakkan tangan anda di sini';
-                            }
+                        });
+                    }
+                    if (handInPosition) {
+                        if (!handGuideBox.classList.contains('detecting') && !handGuideBox.classList.contains('verified')) {
+                            handGuideBox.classList.add('detecting');
+                            handGuideText.textContent = "Pengesahan kedua...";
+                            handVerificationTimer = setTimeout(() => {
+                                handGuideBox.classList.remove('detecting');
+                                handGuideBox.classList.add('verified');
+                                handGuideText.textContent = "Pengesahan Berjaya";
+                                setTimeout(showSuccessScreen, 500);
+                            }, 2000);
                         }
                     } else {
-                        // No recognized face, or locked face lost
-                        lockedOnDescriptor = null;
-                        firstMatchTime = null;
-                        handGuideBox.style.display = 'none';
-
-                        if (resizedDetections.length > 0) {
-                            resizedDetections.forEach(detection => {
-                                const { flippedBox, score } = processDetection(detection);
-                                new faceapi.draw.DrawBox(flippedBox, { label: `TIADA AKSES (${score.toFixed(2)})`, boxColor: 'rgba(220, 53, 69, 0.7)' }).draw(overlayCanvas);
-                            });
-                        } else {
-                            drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2 - 150, overlayCanvas.height / 2);
-                        }
+                        clearTimeout(handVerificationTimer);
+                        handVerificationTimer = null;
+                        handGuideBox.classList.remove('detecting', 'verified');
+                        handGuideText.textContent = 'Letakkan tangan anda di sini';
                     }
-                }, 100);
-            });
+                } else {
+                    handGuideBox.style.display = 'none';
+                }
+
+                if (!recognizedFaceFoundThisFrame) {
+                    firstMatchTime = null;
+                }
+                if (resizedDetections.filter(d=>d.detection.score >= 0.5).length === 0) {
+                     drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2 - 150, overlayCanvas.height / 2);
+                }
+            }, 100);
         });
     }
 
@@ -714,7 +714,7 @@
             height: box.height + paddingY
         };
         const flippedBox = { x: overlayCanvas.width - paddedBox.x - paddedBox.width, y: paddedBox.y, width: paddedBox.width, height: paddedBox.height };
-        const bestMatch = faceMatcher ? faceMatcher.findBestMatch(detection.descriptor) : { label: 'unknown' };
+        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
         const score = detection.detection.score;
         return { flippedBox, bestMatch, score };
     };
@@ -724,6 +724,7 @@
         registrationChoice.style.display = 'none';
         startCamera().then(success => {
             if (!success) return;
+            showVideoFeed();
             imageUploadGroup.style.display = 'none';
             registrationForm.style.display = 'flex';
             
@@ -780,7 +781,7 @@
 
     function startImageUploadRegistration() {
         clearAllIntervals();
-        stopCamera();
+        hideVideoFeed();
         registrationChoice.style.display = 'none';
         imageUploadGroup.style.display = 'flex';
         registrationForm.style.display = 'flex';
@@ -966,6 +967,7 @@
         handGuideBox.style.display = 'none';
         mainMenu.style.display = 'flex';
         imageUploadInput.value = '';
+        hideVideoFeed();
         stopCamera();
         setPlaceholderContent(initialPlaceholderContent);
         loadRegisteredUsers();
@@ -977,10 +979,8 @@
             return;
         }
         mainMenu.style.display = 'none';
-        loadModels(() => {
-            registrationChoice.style.display = 'flex';
-            statusMessage.innerText = 'Pilih kaedah pendaftaran.';
-        });
+        registrationChoice.style.display = 'flex';
+        statusMessage.innerText = 'Pilih kaedah pendaftaran.';
     });
     registerCameraBtn.addEventListener('click', startRegistrationGuide);
     registerImageBtn.addEventListener('click', startImageUploadRegistration);
@@ -1007,17 +1007,17 @@
             await handleVideoRegistration(name, position);
         }
     });
-    recognizeBtn.addEventListener('click', () => {
-        loadModels(startRecognition);
-    });
+    recognizeBtn.addEventListener('click', startRecognition);
 
     function showError(msg) {
         errorMessage.innerText = msg;
         errorMessage.style.display = 'block';
     }
     
-    setPlaceholderContent(initialPlaceholderContent);
-    loadRegisteredUsers();
+    // Initial App Load
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeAppFlow();
+    });
 
 </script>
 </body>
