@@ -1,10 +1,10 @@
-<!-- Projek Pustaka 3D - Versi 1.8.1 (Final Polish) -->
+<!-- Projek Pustaka 3D - Versi 1.8.2 (Persekitaran & Cahaya Dibetulkan) -->
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pustaka 3D v1.8.1</title>
+    <title>Pustaka 3D v1.8.2</title>
     <style>
         body { margin: 0; background-color: #000; overflow: hidden; }
         canvas { display: block; }
@@ -79,8 +79,8 @@
 </head>
 <body>
     <div id="info">
-        <span id="desktop-instructions">Pustaka 3D v1.8.1 | Klik & Seret: Pusing | Skrol: Zum | Klik Buku: Selak</span>
-        <span id="mobile-instructions" class="mobile-instructions">Seret 1 Jari: Pusing | Cubit 2 Jari: Zum | Sentuh Buku: Selak</span>
+        <span id="desktop-instructions">RTD Majlis Daerah Batu Gajah 2035 (Penggantian) | Klik & Seret: Pusing | Skrol: Zum | Klik Buku: Selak</span>
+        <span id="mobile-instructions" class="mobile-instructions">RTD Majlis Daerah Batu Gajah 2035 (Penggantian) | Seret 1 Jari: Pusing | Cubit 2 Jari: Zum | Sentuh Buku: Selak</span>
     </div>
     <canvas id="c"></canvas>
 
@@ -118,100 +118,153 @@
         const NUM_PAGES = IMAGE_PATHS.length;
         const NUM_SHEETS = NUM_PAGES / 2;
         
-        // --- KELAS PENGURUSAN SCENE ---
+        // --- KELAS PENGURUSAN SCENE (VERSI ESTETIK BARU - DIBETULKAN) ---
         class SceneManager {
             constructor(canvas) {
                 this.canvas = canvas;
                 this.screenDimensions = { width: window.innerWidth, height: window.innerHeight };
+                this.textureLoader = new THREE.TextureLoader();
                 this.scene = this._buildScene();
                 this.renderer = this._buildRenderer(this.screenDimensions);
                 this.camera = this._buildCamera(this.screenDimensions);
                 this.controls = this._setupControls();
                 this.fullscreenButtons = [];
-                this._createEnvironment();
-                this._setupLights();
+                this._createElegantEnvironment();
+                this._setupDramaticLighting();
             }
+
             _buildScene() {
                 const scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x1a1a1a);
+                scene.background = new THREE.Color(0x050505);
+                scene.fog = new THREE.Fog(0x050505, 15, 40);
                 return scene;
             }
+
             _buildRenderer({ width, height }) {
                 const renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: "high-performance" });
                 renderer.setSize(width, height);
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
                 renderer.shadowMap.enabled = true;
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.0;
                 return renderer;
             }
+
             _buildCamera({ width, height }) {
-                const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-                camera.position.set(0, 5, 6);
+                const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+                camera.position.set(0, 5, 7);
                 return camera;
             }
+
             _setupControls() {
                 const controls = new OrbitControls(this.camera, this.renderer.domElement);
                 controls.enableDamping = true;
                 controls.dampingFactor = 0.05;
                 controls.screenSpacePanning = false;
-                controls.minDistance = 2;
-                controls.maxDistance = 15;
-                controls.maxPolarAngle = Math.PI / 2;
+                controls.minDistance = 3;
+                controls.maxDistance = 20;
+                controls.maxPolarAngle = Math.PI / 2 - 0.1;
                 controls.target.set(0, 2.7, 0);
                 return controls;
             }
-            _createEnvironment() {
-                const floor = new THREE.Mesh(new THREE.CircleGeometry(25, 64), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.1, roughness: 0.8 }));
+
+            _createElegantEnvironment() {
+                // PEMBETULAN: Menggunakan tekstur tempatan dari folder 'img'
+                const floorTexture = this.textureLoader.load('img/marble_floor.jpg');
+                floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+                floorTexture.repeat.set(8, 8);
+                const floorMaterial = new THREE.MeshStandardMaterial({
+                    map: floorTexture,
+                    metalness: 0.1,
+                    roughness: 0.2,
+                });
+                const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), floorMaterial);
                 floor.rotation.x = -Math.PI / 2;
                 floor.receiveShadow = true;
                 this.scene.add(floor);
-                const wall = new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 20, 64, 1, true), new THREE.MeshStandardMaterial({ color: 0x222222, side: THREE.BackSide, metalness: 0.2, roughness: 0.9 }));
+                
+                // PEMBETULAN: Menggunakan tekstur tempatan dari folder 'img'
+                const wallTexture = this.textureLoader.load('img/concrete_wall.jpg');
+                wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
+                wallTexture.repeat.set(16, 2);
+                const wall = new THREE.Mesh(
+                    new THREE.CylinderGeometry(30, 30, 20, 64, 1, true),
+                    new THREE.MeshStandardMaterial({
+                        map: wallTexture,
+                        side: THREE.BackSide,
+                        roughness: 0.9
+                    })
+                );
                 wall.position.y = 10;
                 this.scene.add(wall);
-                const pedestalHeight = 2.5;
-                const pedestalBase = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.8, pedestalHeight, 32), new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.1, roughness: 0.4 }));
+                
+                const ceiling = new THREE.Mesh(
+                    new THREE.CircleGeometry(30, 64),
+                    new THREE.MeshStandardMaterial({ color: 0x111111 })
+                );
+                ceiling.position.y = 13;
+                ceiling.rotation.x = Math.PI / 2;
+                this.scene.add(ceiling);
+
+                const pedestalHeight = 2.54;
+                const pedestalMaterial = new THREE.MeshStandardMaterial({ color: 0x181818, metalness: 0.2, roughness: 0.3 });
+                const pedestalBase = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, pedestalHeight, 48), pedestalMaterial);
                 pedestalBase.position.y = pedestalHeight / 2;
                 pedestalBase.castShadow = true;
                 pedestalBase.receiveShadow = true;
                 this.scene.add(pedestalBase);
                 
                 const slabHeight = 0.2;
-                const slab = new THREE.Mesh(new THREE.BoxGeometry(5.5, slabHeight, 2.5), new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.1, roughness: 0.4 }));
+                const slab = new THREE.Mesh(new THREE.BoxGeometry(5.5, slabHeight, 2.5), pedestalMaterial);
                 slab.position.y = pedestalHeight + (slabHeight / 2);
                 slab.castShadow = true;
                 slab.receiveShadow = true;
                 this.scene.add(slab);
 
-                // FIX: Penambahbaikan pada butang
-                const btnGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 32);
-                const btnMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.5, roughness: 0.5 }); // Warna diubah
+                const btnGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.02, 32);
+                const btnMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.4, emissive: 0x222222 });
                 
                 const rightButton = new THREE.Mesh(btnGeo, btnMat);
-                // Posisi diubah (lebih ke depan)
-                rightButton.position.set(1.25, pedestalHeight + slabHeight + 0.025, 0.9);
-                // Orientasi dibetulkan (tiada putaran x)
+                rightButton.position.set(1.25, pedestalHeight + slabHeight + 0.01, 1.0);
                 rightButton.userData = { isFullscreenButton: true, side: 'right' };
                 this.scene.add(rightButton);
 
                 const leftButton = new THREE.Mesh(btnGeo.clone(), btnMat.clone());
-                 // Posisi diubah (lebih ke depan)
-                leftButton.position.set(-1.25, pedestalHeight + slabHeight + 0.025, 0.9);
-                // Orientasi dibetulkan (tiada putaran x)
+                leftButton.position.set(-1.25, pedestalHeight + slabHeight + 0.01, 1.0);
                 leftButton.userData = { isFullscreenButton: true, side: 'left' };
                 this.scene.add(leftButton);
 
                 this.fullscreenButtons.push(leftButton, rightButton);
             }
-            _setupLights() {
-                this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-                const spotLight = new THREE.SpotLight(0xffffff, 1.0, 30, Math.PI * 0.15, 0.5, 1.5);
-                spotLight.position.set(8, 12, 8);
-                spotLight.target.position.set(0, 2.5, 0);
-                spotLight.castShadow = true;
-                spotLight.shadow.mapSize.width = 1024;
-                spotLight.shadow.mapSize.height = 1024;
-                this.scene.add(spotLight, spotLight.target);
+
+            _setupDramaticLighting() {
+                // Ambient light dikurangkan lagi untuk bayang yang lebih dramatik
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+                
+                // KEMASKINI: Persediaan dua lampu dari arah berbeza untuk bayang yang unik
+                
+                // Lampu Utama (Kanan) - Cahaya hangat
+                const rightSpotlight = new THREE.SpotLight(0xffeedd, 1.5, 35, Math.PI * 0.2, 0.25, 1);
+                rightSpotlight.position.set(8, 8, 5); // Dari kanan, sedikit di hadapan
+                rightSpotlight.target.position.set(0, 2.5, 0);
+                rightSpotlight.castShadow = true;
+                rightSpotlight.shadow.mapSize.width = 2048;
+                rightSpotlight.shadow.mapSize.height = 2048;
+                rightSpotlight.shadow.bias = -0.0001;
+                this.scene.add(rightSpotlight, rightSpotlight.target);
+
+                // Lampu Kedua (Kiri) - Cahaya sejuk
+                const leftSpotlight = new THREE.SpotLight(0xddeeff, 0.7, 35, Math.PI * 0.2, 0.25, 1);
+                leftSpotlight.position.set(-8, 8, 5); // Dari kiri, sedikit di hadapan
+                leftSpotlight.target.position.set(0, 2.5, 0);
+                leftSpotlight.castShadow = true; // Kedua-dua lampu menghasilkan bayang
+                leftSpotlight.shadow.mapSize.width = 2048;
+                leftSpotlight.shadow.mapSize.height = 2048;
+                leftSpotlight.shadow.bias = -0.0001;
+                this.scene.add(leftSpotlight, leftSpotlight.target);
             }
+
             onWindowResize() {
                 this.screenDimensions.width = window.innerWidth;
                 this.screenDimensions.height = window.innerHeight;
@@ -219,6 +272,7 @@
                 this.camera.updateProjectionMatrix();
                 this.renderer.setSize(this.screenDimensions.width, this.screenDimensions.height);
             }
+
             update() {
                 this.controls.update();
                 TWEEN.update();
@@ -226,7 +280,7 @@
             }
         }
         
-        // --- KELAS BUKU (KOD STABIL DARIPADA TUAN) ---
+        // --- KELAS BUKU (KOD STABIL) ---
         class Book {
              constructor() {
                 this.BOOK_WIDTH = 2.5;
@@ -313,7 +367,7 @@
                 const sheetToTurn = this.sheets[sheetIndex];
                 const startAngle = sheetToTurn.rotation.y;
                 const endAngle = isForward ? -Math.PI : 0;
-                const targetZ = isForward ? sheetIndex * this.PAGE_THICKNESS - 0.05 : -sheetIndex * this.PAGE_THICKNESS;
+                const targetZ = isForward ? sheetIndex * this.PAGE_THICKNESS - 0.048 : -sheetIndex * this.PAGE_THICKNESS;
                 const animationProxy = { angle: startAngle, z: sheetToTurn.position.z };
 
                 new TWEEN.Tween(animationProxy)
@@ -331,7 +385,7 @@
             }
         }
 
-        // --- NEW: UI Controller Class ---
+        // --- UI Controller Class ---
         class UIController {
             constructor() {
                 this.modal = document.getElementById('fullscreen-modal');
