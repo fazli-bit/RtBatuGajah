@@ -1,298 +1,355 @@
-<!-- Flipbook App v2.3 - Animation Stacking Bug Fix -->
+<!-- Projek Pustaka 3D - Versi 1.5.6 -->
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Digital Flipbook v2.3</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Pustaka 3D v1.5.6</title>
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #8B4513;
-            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            overflow: hidden;
-            color: #333;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.5rem;
-            padding: 1rem;
-        }
-        
-        .book {
-            position: relative;
-            width: 90vw;
-            height: 31.8vw; 
-            max-width: 1200px;
-            max-height: 424px; 
-            perspective: 2500px;
-            user-select: none;
-        }
-        
-        .paper {
+        body { margin: 0; background-color: #000; }
+        canvas { display: block; cursor: pointer; }
+        #info {
             position: absolute;
-            width: 50%;
-            height: 100%;
-            top: 0;
-            left: 50%; 
-            transform-style: preserve-3d;
-            transform-origin: left center; 
-            transition: transform 0.6s ease-in-out;
-        }
-
-        .paper.flipped {
-            transform: rotateY(-180deg);
-        }
-
-        .front,
-        .back {
-            position: absolute;
+            top: 10px;
             width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            backface-visibility: hidden;
-            background-color: #fdfaf3;
-            border: 1px solid #e0dccc;
-        }
-        
-        .front-content,
-        .back-content {
-            cursor: pointer;
-        }
-
-        .paper .front {
-            border-radius: 0 10px 10px 0;
-        }
-        .paper .back {
-            border-radius: 10px 0 0 10px;
-            transform: rotateY(180deg);
-        }
-
-        .front-content,
-        .back-content {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 0.5rem;
-            box-sizing: border-box;
             text-align: center;
-        }
-
-        .page-text {
-            font-size: 0.8rem;
-            line-height: 1.4;
-            color: #6d6d6d;
-            margin-top: 0.5rem;
-        }
-        
-        .placeholder-image {
-            width: 95%;
-            height: 85%;
-            background-color: #e0dccc;
-            border-radius: 8px;
-            object-fit: cover;
-            cursor: zoom-in;
-        }
-
-        .cover-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: inherit;
+            z-index: 100;
+            display:block;
+            color: white;
+            font-family: monospace;
         }
     </style>
+    <!-- Menguruskan modul Three.js dan add-on -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
+        }
+    }
+    </script>
 </head>
 <body>
+    <div id="info">Pustaka 3D v1.5.6 | Pembetulan Akhir Animasi & Logik Tekstur</div>
+    <canvas id="c"></canvas>
 
-    <div class="container">
-        <!-- Buku -->
-        <div class="book" id="book">
-            <div id="p1" class="paper">
-                <div class="front"><div class="front-content" style="padding:0;"><img src="img/depan.jpg" alt="Muka Depan" class="cover-image"></div></div>
-                <div class="back"><div class="back-content"><img src="img/gambar_1.jpg" alt="Halaman 1" class="placeholder-image fullscreen-trigger"><p class="page-text">1</p></div></div>
-            </div>
-            <div id="p2" class="paper">
-                <div class="front"><div class="front-content"><img src="img/gambar_2.jpg" alt="Halaman 2" class="placeholder-image fullscreen-trigger"><p class="page-text">2</p></div></div>
-                <div class="back"><div class="back-content"><img src="img/gambar_3.jpg" alt="Halaman 3" class="placeholder-image fullscreen-trigger"><p class="page-text">3</p></div></div>
-            </div>
-            <div id="p3" class="paper">
-                <div class="front"><div class="front-content"><img src="img/gambar_4.jpg" alt="Halaman 4" class="placeholder-image fullscreen-trigger"><p class="page-text">4</p></div></div>
-                <div class="back"><div class="back-content"><img src="img/gambar_5.jpg" alt="Halaman 5" class="placeholder-image fullscreen-trigger"><p class="page-text">5</p></div></div>
-            </div>
-            <div id="p4" class="paper">
-                <div class="front"><div class="front-content"><img src="img/gambar_6.jpg" alt="Halaman 6" class="placeholder-image fullscreen-trigger"><p class="page-text">6</p></div></div>
-                <div class="back"><div class="back-content"><img src="img/gambar_7.jpg" alt="Halaman 7" class="placeholder-image fullscreen-trigger"><p class="page-text">7</p></div></div>
-            </div>
-            <div id="p5" class="paper">
-                <div class="front"><div class="front-content"><img src="img/gambar_8.jpg" alt="Halaman 8" class="placeholder-image fullscreen-trigger"><p class="page-text">8</p></div></div>
-                <div class="back"><div class="back-content"><img src="img/gambar_9.jpg" alt="Halaman 9" class="placeholder-image fullscreen-trigger"><p class="page-text">9</p></div></div>
-            </div>
-            <div id="p6" class="paper">
-                <div class="front"><div class="front-content"><img src="img/gambar_10.jpg" alt="Halaman 10" class="placeholder-image fullscreen-trigger"><p class="page-text">10</p></div></div>
-                <div class="back"><div class="back-content"><img src="img/gambar_11.jpg" alt="Halaman 11" class="placeholder-image fullscreen-trigger"><p class="page-text">11</p></div></div>
-            </div>
-            <div id="p7" class="paper">
-                <div class="front"><div class="front-content"><img src="img/gambar_12.jpg" alt="Halaman 12" class="placeholder-image fullscreen-trigger"><p class="page-text">12</p></div></div>
-                <div class="back"><div class="back-content"><img src="img/gambar_13.jpg" alt="Halaman 13" class="placeholder-image fullscreen-trigger"><p class="page-text">13</p></div></div>
-            </div>
-            <div id="p8" class="paper">
-                <div class="front"><div class="front-content"><img src="img/gambar_14.jpg" alt="Halaman 14" class="placeholder-image fullscreen-trigger"><p class="page-text">14</p></div></div>
-                <div class="back"><div class="back-content" style="padding:0;"><img src="img/belakang.jpg" alt="Muka Belakang" class="cover-image"></div></div>
-            </div>
-        </div>
+    <script type="module">
+		import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TWEEN } from 'three/addons/libs/tween.module.min.js';
 
-        <!-- Butang Navigasi -->
-        <div class="flex items-center space-x-4">
-            <button id="prev-btn" class="px-4 py-2 bg-white/80 text-gray-800 font-semibold rounded-lg shadow-lg hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-transform transform hover:scale-105">
-                Sebelumnya
-            </button>
-            <button id="home-btn" class="p-3 bg-white/80 text-gray-800 font-semibold rounded-full shadow-lg hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-transform transform hover:scale-105">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-            </button>
-            <button id="next-btn" class="px-4 py-2 bg-white/80 text-gray-800 font-semibold rounded-lg shadow-lg hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-transform transform hover:scale-105">
-                Seterusnya
-            </button>
-        </div>
-    </div>
-    
-    <div id="fullscreen-overlay" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer">
-        <img id="fullscreen-image" src="" alt="Fullscreen Image" class="max-w-full max-h-full object-contain">
-        <button id="close-fullscreen" class="absolute top-5 right-8 text-white text-5xl font-bold">&times;</button>
-    </div>
+// --- KONFIGURASI BUKU (KEKAL SAMA) ---
+const IMAGE_PATHS = [
+    'img/depan.jpg',      // 0: Muka depan
+    'img/gambar_1.jpg',   // 1
+    'img/gambar_2.jpg',   // 2
+    'img/gambar_3.jpg',   // 3
+    'img/gambar_4.jpg',   // 4
+    'img/gambar_5.jpg',   // 5
+    'img/gambar_6.jpg',   // 6
+    'img/gambar_7.jpg',   // 7
+    'img/gambar_8.jpg',   // 8
+    'img/gambar_9.jpg',   // 9
+    'img/gambar_10.jpg',  // 10
+    'img/gambar_11.jpg',  // 11
+    'img/gambar_12.jpg',  // 12
+    'img/gambar_13.jpg',  // 13
+    'img/gambar_14.jpg',  // 14
+    'img/belakang.jpg'    // 15: Muka belakang
+];
+const NUM_PAGES = IMAGE_PATHS.length;
+const NUM_SHEETS = NUM_PAGES / 2;
 
+// --- KELAS PENGURUSAN SCENE (KEKAL SAMA, TIADA PERUBAHAN) ---
+class SceneManager {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.screenDimensions = { width: window.innerWidth, height: window.innerHeight };
+        this.scene = this._buildScene();
+        this.renderer = this._buildRenderer(this.screenDimensions);
+        this.camera = this._buildCamera(this.screenDimensions);
+        this.controls = this._setupControls();
+        this._createEnvironment();
+        this._setupLights();
+    }
+    _buildScene() {
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+        return scene;
+    }
+    _buildRenderer({ width, height }) {
+        const renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        return renderer;
+    }
+    _buildCamera({ width, height }) {
+        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+        camera.position.set(0, 5, 6);
+        return camera;
+    }
+    _setupControls() {
+        const controls = new OrbitControls(this.camera, this.renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.minDistance = 2;
+        controls.maxDistance = 15;
+        controls.maxPolarAngle = Math.PI / 2;
+        controls.target.set(0, 2.7, 0);
+        return controls;
+    }
+    _createEnvironment() {
+        const floor = new THREE.Mesh(new THREE.CircleGeometry(25, 64), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.1, roughness: 0.8 }));
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        this.scene.add(floor);
+        const wall = new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 20, 64, 1, true), new THREE.MeshStandardMaterial({ color: 0x222222, side: THREE.BackSide, metalness: 0.2, roughness: 0.9 }));
+        wall.position.y = 10;
+        this.scene.add(wall);
+        const pedestalHeight = 2.5;
+        const pedestalBase = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.8, pedestalHeight, 32), new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.1, roughness: 0.4 }));
+        pedestalBase.position.y = pedestalHeight / 2;
+        pedestalBase.castShadow = true;
+        pedestalBase.receiveShadow = true;
+        this.scene.add(pedestalBase);
+        const slabHeight = 0.2;
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(4, slabHeight, 2.5), new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.1, roughness: 0.4 }));
+        slab.position.y = pedestalHeight + (slabHeight / 2);
+        slab.castShadow = true;
+        slab.receiveShadow = true;
+        this.scene.add(slab);
+    }
+    _setupLights() {
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        const spotLight = new THREE.SpotLight(0xffffff, 1.0, 30, Math.PI * 0.15, 0.5, 1.5);
+        spotLight.position.set(8, 12, 8);
+        spotLight.target.position.set(0, 2.5, 0);
+        spotLight.castShadow = true;
+        spotLight.shadow.mapSize.width = 1024;
+        spotLight.shadow.mapSize.height = 1024;
+        this.scene.add(spotLight, spotLight.target);
+    }
+    onWindowResize() {
+        this.screenDimensions.width = window.innerWidth;
+        this.screenDimensions.height = window.innerHeight;
+        this.camera.aspect = this.screenDimensions.width / this.screenDimensions.height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(this.screenDimensions.width, this.screenDimensions.height);
+    }
+    update() {
+        this.controls.update();
+        TWEEN.update();
+        this.renderer.render(this.scene, this.camera);
+    }
+}
 
-    <script>
-        const book = document.getElementById('book');
-        const prevBtn = document.getElementById("prev-btn");
-        const nextBtn = document.getElementById("next-btn");
-        const homeBtn = document.getElementById("home-btn");
-        const papers = Array.from(document.querySelectorAll(".paper"));
+// --- KELAS BUKU (DIROMBAK SEPENUHNYA) ---
+class Book {
+    constructor() {
+        // Dimensi dan sifat buku
+        this.BOOK_WIDTH = 2.5;
+        this.BOOK_DEPTH = 1.8;
+        this.PAGE_THICKNESS = 0.008; // FIX 1: Nilai ditingkatkan
+        this.SPINE_OFFSET = 0.01;
         
-        const fullscreenOverlay = document.getElementById('fullscreen-overlay');
-        const fullscreenImage = document.getElementById('fullscreen-image');
-        const closeFullscreenBtn = document.getElementById('close-fullscreen');
+        // Pengurusan keadaan
+        this.sheets = [];
+        this.currentSheetIndex = 0;
+        this.isAnimating = false;
 
-        const numPapers = papers.length;
-        let currentLocation = 0;
-        let isFlipping = false; // Add a lock to prevent rapid clicks
+        // Kumpulan utama untuk semua bahagian buku
+        this.mesh = new THREE.Group();
+        this.mesh.position.set(0, 2.8, 0);
+        this.mesh.rotation.x = -Math.PI / 2;
 
-        // --- Event Listeners ---
-        nextBtn.addEventListener("click", goNextPage);
-        prevBtn.addEventListener("click", goPrevPage);
-        homeBtn.addEventListener("click", goToFirstPage);
-        book.addEventListener('click', handleBookClick);
-        
-        closeFullscreenBtn.addEventListener('click', closeFullscreenModal);
-        fullscreenOverlay.addEventListener('click', (e) => {
-            if (e.target === fullscreenOverlay) {
-                closeFullscreenModal();
-            }
+        // Pemuat tekstur
+        this.textureLoader = new THREE.TextureLoader();
+        this.textures = IMAGE_PATHS.map(path => {
+            const texture = this.textureLoader.load(path);
+            texture.flipY = true;
+            return texture;
         });
         
-        // --- Initial Setup ---
-        goToFirstPage();
+        // Membina buku
+        this._createBook();
+        this._createClickTargets();
+    }
 
+    _createBook() {
+        const pageGeometry = new THREE.PlaneGeometry(this.BOOK_WIDTH, this.BOOK_DEPTH);
+        pageGeometry.translate(this.BOOK_WIDTH / 2, 0, 0);
 
-        // --- FUNGSI NAVIGASI ---
-        function goNextPage() {
-            if (isFlipping || currentLocation >= numPapers) return;
-            isFlipping = true;
-
-            const pageToFlip = papers[currentLocation];
+        for (let i = 0; i < NUM_SHEETS; i++) {
+            const sheetGroup = new THREE.Group();
             
-            // FIX: Bring page to front for the animation duration
-            pageToFlip.style.zIndex = numPapers + 1;
-            pageToFlip.classList.add("flipped");
+            const frontTexture = this.textures[i * 2];
+            const backTexture = this.textures[i * 2 + 1];
+			backTexture.center.set(0.5, 0.5);
+			backTexture.rotation = Math.PI;
+            const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTexture, side: THREE.FrontSide, roughness: 0.6 });
+            const backMaterial = new THREE.MeshStandardMaterial({ map: backTexture, side: THREE.FrontSide, roughness: 0.6 });
+            const frontPage = new THREE.Mesh(pageGeometry, frontMaterial);
+            const backPage = new THREE.Mesh(pageGeometry, backMaterial);
             
-            currentLocation++;
+            backPage.rotation.x = Math.PI;
+            sheetGroup.add(frontPage, backPage);
+            sheetGroup.position.z = -i * this.PAGE_THICKNESS;
+            
+            sheetGroup.renderOrder = i;
+            frontPage.renderOrder = i;
+            backPage.renderOrder = i;
 
-            // After animation, set its final z-index in the left stack
-            setTimeout(() => {
-                pageToFlip.style.zIndex = currentLocation;
-                isFlipping = false;
-            }, 600); // Must match CSS transition duration
+            this.sheets.push(sheetGroup);
+            this.mesh.add(sheetGroup);
         }
 
-        function goPrevPage() {
-            if (isFlipping || currentLocation <= 0) return;
-            isFlipping = true;
+        const spineHeight = NUM_SHEETS * this.PAGE_THICKNESS;
+        // FIX 2: Dimensi dan posisi tulang buku dibetulkan
+        const spineGeometry = new THREE.BoxGeometry(this.SPINE_OFFSET, this.BOOK_DEPTH, spineHeight);
+        const spineMaterial = new THREE.MeshStandardMaterial({ color: 0x3a2e29, roughness: 0.5 });
+        const spine = new THREE.Mesh(spineGeometry, spineMaterial);
+        spine.position.set(0, 0, -spineHeight / 2 + (this.PAGE_THICKNESS / 2));
+        spine.castShadow = true;
+        this.mesh.add(spine);
+    }
 
-            currentLocation--;
-            const pageToUnflip = papers[currentLocation];
+    _createClickTargets() {
+        const targetGeometry = new THREE.PlaneGeometry(this.BOOK_WIDTH, this.BOOK_DEPTH);
+        const targetMaterial = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
+        this.rightClickTarget = new THREE.Mesh(targetGeometry, targetMaterial);
+        this.rightClickTarget.position.set(this.BOOK_WIDTH / 2, 0.01, 0);
+        this.leftClickTarget = new THREE.Mesh(targetGeometry.clone(), targetMaterial.clone());
+        this.leftClickTarget.position.set(-this.BOOK_WIDTH / 2, 0.01, 0);
+        this.mesh.add(this.rightClickTarget, this.leftClickTarget);
+    }
+    
+    // FIX 3: Logik animasi dibetulkan sepenuhnya
+    turnPage(direction) {
+		if (this.isAnimating) return;
 
-            // FIX: Bring page to front for the animation duration
-            pageToUnflip.style.zIndex = numPapers + 1;
-            pageToUnflip.classList.remove("flipped");
+		const isForward = direction === 'forward';
 
-            // After animation, reset z-index for ALL pages to maintain correct stack order
-            setTimeout(() => {
-                papers.forEach((paper, index) => {
-                    if (index < currentLocation) {
-                        paper.style.zIndex = index + 1;
-                    } else {
-                        paper.style.zIndex = numPapers - index;
-                    }
-                });
-                isFlipping = false;
-            }, 600);
-        }
+		if (isForward && this.currentSheetIndex >= this.sheets.length) return;
+		if (!isForward && this.currentSheetIndex <= 0) return;
 
-        function goToFirstPage() {
-            if (isFlipping) return;
-            currentLocation = 0;
-            papers.forEach((paper, index) => {
-                paper.classList.remove("flipped");
-                paper.style.zIndex = numPapers - index;
-            });
-        }
+		this.isAnimating = true;
 
-        // --- FUNGSI INTERAKTIF ---
-        function handleBookClick(e) {
-            if (isFlipping) return;
+		// --- PERUBAHAN BERMULA DI SINI ---
 
-            if (e.target.classList.contains('fullscreen-trigger')) {
-                openFullscreenModal(e.target.src);
-                return;
-            }
+		// Dapatkan indeks helaian untuk mengira posisi Z
+		const sheetIndex = isForward ? this.currentSheetIndex : this.currentSheetIndex - 1;
+		const sheetToTurn = this.sheets[sheetIndex];
 
-            const bookRect = book.getBoundingClientRect();
-            const clickX = e.clientX - bookRect.left;
+		const startAngle = sheetToTurn.rotation.y;
+		const endAngle = isForward ? -Math.PI : 0;
 
-            if (clickX < bookRect.width / 2) {
-                goPrevPage();
-            } else {
-                goNextPage();
-            }
-        }
+		// Tentukan posisi Z sasaran
+		// Apabila ke depan (kiri), Z positif (timbun ke atas).
+		// Apabila ke belakang (kanan), Z kembali ke posisi negatif asal.
+		const targetZ = isForward 
+			? sheetIndex * this.PAGE_THICKNESS - 0.05 
+			: -sheetIndex * this.PAGE_THICKNESS;
+
+		// Tambah 'z' pada proksi animasi, bermula dari posisi semasa
+		const animationProxy = { 
+			angle: startAngle, 
+			z: sheetToTurn.position.z 
+		};
+
+		new TWEEN.Tween(animationProxy)
+			// Animasikan 'angle' DAN 'z' ke posisi sasaran
+			.to({ angle: endAngle, z: targetZ }, 1200)
+			.easing(TWEEN.Easing.Sinusoidal.InOut)
+			.onUpdate(() => {
+				sheetToTurn.rotation.y = animationProxy.angle;
+				// Kemas kini posisi Z dalam setiap frame animasi
+				sheetToTurn.position.z = animationProxy.z; 
+			})
+			.onComplete(() => {
+				this.currentSheetIndex += isForward ? 1 : -1;
+				this.isAnimating = false;
+			})
+			.start();
+    }
+
+
+	
+	    // --- FUNGSI BAHARU: Untuk mencipta zon klik ---
+    _createClickTargets() {
+        const targetGeometry = new THREE.PlaneGeometry(this.BOOK_WIDTH, this.BOOK_DEPTH);
+        const targetMaterial = new THREE.MeshBasicMaterial({
+            visible: false, // Jadikan ia halimunan
+            side: THREE.DoubleSide
+        });
+
+        this.rightClickTarget = new THREE.Mesh(targetGeometry, targetMaterial);
+        this.rightClickTarget.position.set(this.BOOK_WIDTH / 2, 0.01, 0); // Sedikit di atas buku kanan
         
-        function openFullscreenModal(src) {
-            fullscreenImage.src = src;
-            fullscreenOverlay.classList.remove('hidden');
-        }
 
-        function closeFullscreenModal() {
-            fullscreenOverlay.classList.add('hidden');
-            fullscreenImage.src = '';
-        }
+        this.leftClickTarget = new THREE.Mesh(targetGeometry.clone(), targetMaterial.clone());
+        this.leftClickTarget.position.set(-this.BOOK_WIDTH / 2, 0.01, 0); // Sedikit di atas buku kiri
+        
+        
+        // Tambah sasaran ini ke dalam kumpulan utama buku
+        this.mesh.add(this.rightClickTarget, this.leftClickTarget);
+    } 
+}
 
+// --- KELAS APLIKASI UTAMA (KEKAL SAMA, TIADA PERUBAHAN) ---
+class FlipbookApp {
+    constructor() {
+        this.canvas = document.getElementById('c');
+        this.sceneManager = new SceneManager(this.canvas);
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        
+        // Cipta objek buku baharu
+        this.book = new Book();
+        this.sceneManager.scene.add(this.book.mesh);
+        
+        window.addEventListener('resize', () => this.sceneManager.onWindowResize());
+        window.addEventListener('click', this.onMouseClick.bind(this));
+        
+        this.animate();
+    }
+
+    onMouseClick(event) {
+        if (this.book.isAnimating) return;
+        
+        this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        this.mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+        
+        this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
+        
+        // Hanya semak persilangan dengan sasaran klik yang spesifik
+        const targets = [this.book.leftClickTarget, this.book.rightClickTarget];
+        const intersects = this.raycaster.intersectObjects(targets);
+        
+        if (intersects.length > 0) {
+            const clickedObject = intersects[0].object;
+
+            if (clickedObject === this.book.rightClickTarget) {
+                this.book.turnPage('forward');
+            } else if (clickedObject === this.book.leftClickTarget) {
+                this.book.turnPage('backward');
+            }
+        }
+    }
+    
+    animate() {
+        requestAnimationFrame(this.animate.bind(this));
+        this.sceneManager.update();
+    }
+}
+
+const app = new FlipbookApp();
     </script>
-
 </body>
 </html>
+
+
 
