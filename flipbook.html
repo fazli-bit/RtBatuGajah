@@ -1,10 +1,10 @@
-<!-- Projek Pustaka 3D - Versi 1.5.9 -->
+<!-- Projek Pustaka 3D - Versi 1.6.1 -->
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pustaka 3D v1.5.9</title>
+    <title>Pustaka 3D v1.6.1</title>
     <style>
         body { margin: 0; background-color: #000; overflow: hidden; }
         canvas { display: block; }
@@ -36,7 +36,7 @@
 </head>
 <body>
     <div id="info">
-        <span id="desktop-instructions">Pustaka 3D v1.5.9 | Klik & Seret untuk Pusing | Skrol untuk Zum</span>
+        <span id="desktop-instructions">Pustaka 3D v1.6.1 | Klik & Seret: Pusing | Skrol: Zum | Klik Buku: Selak</span>
         <span id="mobile-instructions" class="mobile-instructions">Seret 1 Jari: Pusing | Cubit 2 Jari: Zum | Sentuh Buku: Selak</span>
     </div>
     <canvas id="c"></canvas>
@@ -46,7 +46,7 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TWEEN } from 'three/addons/libs/tween.module.min.js';
 
-        // --- KONFIGURASI BUKU (KEKAL SAMA) ---
+        // --- KONFIGURASI BUKU ---
         const IMAGE_PATHS = [
             'img/depan.jpg',     // 0: Muka depan
             'img/gambar_1.jpg',  // 1
@@ -68,7 +68,7 @@
         const NUM_PAGES = IMAGE_PATHS.length;
         const NUM_SHEETS = NUM_PAGES / 2;
         
-        // --- KELAS PENGURUSAN SCENE (TIADA PERUBAHAN) ---
+        // --- KELAS PENGURUSAN SCENE ---
         class SceneManager {
             constructor(canvas) {
                 this.canvas = canvas;
@@ -154,7 +154,7 @@
             }
         }
         
-        // --- KELAS BUKU (KOD STABIL DARIPADA TUAN - TIADA PERUBAHAN) ---
+        // --- KELAS BUKU (KOD STABIL DARIPADA TUAN) ---
         class Book {
              constructor() {
                 this.BOOK_WIDTH = 2.5;
@@ -190,8 +190,11 @@
                     
                     const frontTexture = this.textures[i * 2];
                     const backTexture = this.textures[i * 2 + 1];
+                    
+                    // FIX: Kod tuan yang membetulkan orientasi tekstur DIKEKALKAN
                     backTexture.center.set(0.5, 0.5);
                     backTexture.rotation = Math.PI;
+
                     const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTexture, side: THREE.FrontSide, roughness: 0.6 });
                     const backMaterial = new THREE.MeshStandardMaterial({ map: backTexture, side: THREE.FrontSide, roughness: 0.6 });
                     const frontPage = new THREE.Mesh(pageGeometry, frontMaterial);
@@ -257,7 +260,7 @@
             }
         }
 
-        // --- KELAS APLIKASI UTAMA (DENGAN PENAMBAHBAIKAN) ---
+        // --- KELAS APLIKASI UTAMA ---
         class FlipbookApp {
             constructor() {
                 this.canvas = document.getElementById('c');
@@ -270,7 +273,6 @@
                 
                 this.isMobile = 'ontouchstart' in window;
                 
-                // NEW: Touch detection variables
                 this.touchStartPos = new THREE.Vector2();
                 this.touchStartTime = 0;
 
@@ -285,7 +287,6 @@
                     document.getElementById('desktop-instructions').style.display = 'none';
                     document.getElementById('mobile-instructions').style.display = 'inline';
                     
-                    // FIX: Listeners are now on canvas, not document
                     this.canvas.addEventListener('touchstart', this.onTouchStart.bind(this));
                     this.canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
                 } else {
@@ -293,17 +294,14 @@
                 }
             }
 
-            // --- NEW: Mobile Touch Handlers ---
             onTouchStart(event) {
-                // Only care about the start of the first touch
                 if (event.touches.length === 1) {
                     this.touchStartPos.set(event.touches[0].clientX, event.touches[0].clientY);
                     this.touchStartTime = Date.now();
                 }
             }
 
-            onTouchend(event) {
-                // Only process if it was the last finger being lifted
+            onTouchEnd(event) {
                 if (event.touches.length > 0) {
                     return;
                 }
@@ -312,7 +310,6 @@
                 const distance = this.touchStartPos.distanceTo(touchEndPos);
                 const touchTime = Date.now() - this.touchStartTime;
 
-                // Check if it's a "tap" (short time, small movement distance)
                 if (touchTime < 250 && distance < 10) {
                     this.handleTap(event.changedTouches[0]);
                 }
@@ -339,7 +336,7 @@
             }
             
             onMouseClick(event) {
-                this.handleTap(event); // Desktop click uses the same logic as a mobile tap
+                this.handleTap(event);
             }
             
             animate() {
