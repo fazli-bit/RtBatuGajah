@@ -164,7 +164,7 @@
                 controls.screenSpacePanning = false;
                 controls.minDistance = 3;
                 controls.maxDistance = 20;
-                controls.maxPolarAngle = Math.PI / 2 - 0.1;
+                controls.maxPolarAngle = Math.PI / 2 - 0.2;
                 controls.target.set(0, 2.7, 0);
                 return controls;
             }
@@ -240,13 +240,13 @@
 
             _setupDramaticLighting() {
                 // Ambient light dikurangkan lagi untuk bayang yang lebih dramatik
-                this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.2));
                 
                 // KEMASKINI: Persediaan dua lampu dari arah berbeza untuk bayang yang unik
                 
                 // Lampu Utama (Kanan) - Cahaya hangat
                 const rightSpotlight = new THREE.SpotLight(0xffeedd, 1.5, 35, Math.PI * 0.2, 0.25, 1);
-                rightSpotlight.position.set(8, 8, 5); // Dari kanan, sedikit di hadapan
+                rightSpotlight.position.set(5, 8, 5); // Dari kanan, sedikit di hadapan
                 rightSpotlight.target.position.set(0, 2.5, 0);
                 rightSpotlight.castShadow = true;
                 rightSpotlight.shadow.mapSize.width = 2048;
@@ -256,7 +256,7 @@
 
                 // Lampu Kedua (Kiri) - Cahaya sejuk
                 const leftSpotlight = new THREE.SpotLight(0xddeeff, 0.7, 35, Math.PI * 0.2, 0.25, 1);
-                leftSpotlight.position.set(-8, 8, 5); // Dari kiri, sedikit di hadapan
+                leftSpotlight.position.set(-5, 8, 5); // Dari kiri, sedikit di hadapan
                 leftSpotlight.target.position.set(0, 2.5, 0);
                 leftSpotlight.castShadow = true; // Kedua-dua lampu menghasilkan bayang
                 leftSpotlight.shadow.mapSize.width = 2048;
