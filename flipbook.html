@@ -226,12 +226,12 @@
                 const btnMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.4, emissive: 0x222222 });
                 
                 const rightButton = new THREE.Mesh(btnGeo, btnMat);
-                rightButton.position.set(1.25, pedestalHeight + slabHeight + 0.01, 1.0);
+                rightButton.position.set(1.25, pedestalHeight + slabHeight + 0.01, 1.1);
                 rightButton.userData = { isFullscreenButton: true, side: 'right' };
                 this.scene.add(rightButton);
 
                 const leftButton = new THREE.Mesh(btnGeo.clone(), btnMat.clone());
-                leftButton.position.set(-1.25, pedestalHeight + slabHeight + 0.01, 1.0);
+                leftButton.position.set(-1.25, pedestalHeight + slabHeight + 0.01, 1.1);
                 leftButton.userData = { isFullscreenButton: true, side: 'left' };
                 this.scene.add(leftButton);
 
