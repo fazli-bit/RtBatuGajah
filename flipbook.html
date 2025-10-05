@@ -1,10 +1,10 @@
-<!-- Projek Pustaka 3D - Versi 1.5.8 -->
+<!-- Projek Pustaka 3D - Versi 1.5.9 -->
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pustaka 3D v1.5.8</title>
+    <title>Pustaka 3D v1.5.9</title>
     <style>
         body { margin: 0; background-color: #000; overflow: hidden; }
         canvas { display: block; }
@@ -17,11 +17,10 @@
             display:block;
             color: white;
             font-family: monospace;
-            pointer-events: none; /* Make text non-interactive */
+            pointer-events: none;
         }
-        /* NEW: Mobile specific instructions */
         .mobile-instructions {
-             display: none; /* Hidden by default */
+             display: none;
         }
     </style>
     <!-- Menguruskan modul Three.js dan add-on -->
@@ -37,7 +36,7 @@
 </head>
 <body>
     <div id="info">
-        <span id="desktop-instructions">Pustaka 3D v1.5.8 | Klik & Seret untuk Pusing | Skrol untuk Zum</span>
+        <span id="desktop-instructions">Pustaka 3D v1.5.9 | Klik & Seret untuk Pusing | Skrol untuk Zum</span>
         <span id="mobile-instructions" class="mobile-instructions">Seret 1 Jari: Pusing | Cubit 2 Jari: Zum | Sentuh Buku: Selak</span>
     </div>
     <canvas id="c"></canvas>
@@ -272,8 +271,7 @@
                 this.isMobile = 'ontouchstart' in window;
                 
                 // NEW: Touch detection variables
-                this.touchStartX = 0;
-                this.touchStartY = 0;
+                this.touchStartPos = new THREE.Vector2();
                 this.touchStartTime = 0;
 
                 this._setupEventListeners();
@@ -286,11 +284,10 @@
                 if (this.isMobile) {
                     document.getElementById('desktop-instructions').style.display = 'none';
                     document.getElementById('mobile-instructions').style.display = 'inline';
-                    this.sceneManager.controls.enabled = false; // Disable OrbitControls by default
                     
-                    this.canvas.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
-                    this.canvas.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
-                    this.canvas.addEventListener('touchend', this.onTouchend.bind(this), { passive: false });
+                    // FIX: Listeners are now on canvas, not document
+                    this.canvas.addEventListener('touchstart', this.onTouchStart.bind(this));
+                    this.canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
                 } else {
                     this.canvas.addEventListener('click', this.onMouseClick.bind(this));
                 }
@@ -298,46 +295,29 @@
 
             // --- NEW: Mobile Touch Handlers ---
             onTouchStart(event) {
-                // For turning pages (single touch)
+                // Only care about the start of the first touch
                 if (event.touches.length === 1) {
-                    this.touchStartX = event.touches[0].clientX;
-                    this.touchStartY = event.touches[0].clientY;
+                    this.touchStartPos.set(event.touches[0].clientX, event.touches[0].clientY);
                     this.touchStartTime = Date.now();
                 }
-                // Allow OrbitControls for multi-touch gestures (zoom/pan)
-                this.sceneManager.controls.enabled = (event.touches.length > 1);
-                this.sceneManager.controls.onTouchStart(event);
-            }
-
-            onTouchMove(event) {
-                // Allow OrbitControls to handle camera movement
-                this.sceneManager.controls.onTouchMove(event);
             }
 
             onTouchend(event) {
-                // If it was a multi-touch gesture, let OrbitControls finish and do nothing else
-                if (event.touches.length > 0) { 
-                    this.sceneManager.controls.onTouchEnd(event);
+                // Only process if it was the last finger being lifted
+                if (event.touches.length > 0) {
                     return;
                 }
-                
-                this.sceneManager.controls.enabled = false; // Disable after multi-touch ends
-                this.sceneManager.controls.onTouchEnd(event);
 
-                const touchEndX = event.changedTouches[0].clientX;
-                const touchEndY = event.changedTouches[0].clientY;
+                const touchEndPos = new THREE.Vector2(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
+                const distance = this.touchStartPos.distanceTo(touchEndPos);
                 const touchTime = Date.now() - this.touchStartTime;
-                const deltaX = touchEndX - this.touchStartX;
-                const deltaY = touchEndY - this.touchStartY;
-                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-                // Check if it's a "tap" (short duration, small movement)
-                if (touchTime < 200 && distance < 10) {
+                // Check if it's a "tap" (short time, small movement distance)
+                if (touchTime < 250 && distance < 10) {
                     this.handleTap(event.changedTouches[0]);
                 }
             }
             
-            // NEW: Logic for handling a confirmed tap
             handleTap(touchEvent) {
                 if (this.book.isAnimating) return;
                 
