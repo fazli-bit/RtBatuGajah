@@ -208,7 +208,7 @@
                 this.scene.add(ceiling);
 
                 const pedestalHeight = 2.54;
-                const pedestalMaterial = new THREE.MeshStandardMaterial({ color: 0x181818, metalness: 0.2, roughness: 0.3 });
+                const pedestalMaterial = new THREE.MeshStandardMaterial({ color: 0x008888, metalness: 0.6, roughness: 0.1 });
                 const pedestalBase = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, pedestalHeight, 48), pedestalMaterial);
                 pedestalBase.position.y = pedestalHeight / 2;
                 pedestalBase.castShadow = true;
