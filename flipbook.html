@@ -136,7 +136,7 @@
             _buildScene() {
                 const scene = new THREE.Scene();
                 scene.background = new THREE.Color(0x050505);
-                scene.fog = new THREE.Fog(0x050505, 15, 40);
+                //scene.fog = new THREE.Fog(0x050505, 15, 40);
                 return scene;
             }
 
@@ -240,7 +240,7 @@
 
             _setupDramaticLighting() {
                 // Ambient light dikurangkan lagi untuk bayang yang lebih dramatik
-                this.scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
                 
                 // KEMASKINI: Persediaan dua lampu dari arah berbeza untuk bayang yang unik
                 
