@@ -1,13 +1,13 @@
-<!-- Projek Pustaka 3D - Versi 1.5.6 -->
+<!-- Projek Pustaka 3D - Versi 1.5.8 -->
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pustaka 3D v1.5.6</title>
+    <title>Pustaka 3D v1.5.8</title>
     <style>
-        body { margin: 0; background-color: #000; }
-        canvas { display: block; cursor: pointer; }
+        body { margin: 0; background-color: #000; overflow: hidden; }
+        canvas { display: block; }
         #info {
             position: absolute;
             top: 10px;
@@ -17,6 +17,11 @@
             display:block;
             color: white;
             font-family: monospace;
+            pointer-events: none; /* Make text non-interactive */
+        }
+        /* NEW: Mobile specific instructions */
+        .mobile-instructions {
+             display: none; /* Hidden by default */
         }
     </style>
     <!-- Menguruskan modul Three.js dan add-on -->
@@ -31,325 +36,340 @@
     </script>
 </head>
 <body>
-    <div id="info">Pustaka 3D v1.5.6 | Pembetulan Akhir Animasi & Logik Tekstur</div>
+    <div id="info">
+        <span id="desktop-instructions">Pustaka 3D v1.5.8 | Klik & Seret untuk Pusing | Skrol untuk Zum</span>
+        <span id="mobile-instructions" class="mobile-instructions">Seret 1 Jari: Pusing | Cubit 2 Jari: Zum | Sentuh Buku: Selak</span>
+    </div>
     <canvas id="c"></canvas>
 
     <script type="module">
-		import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TWEEN } from 'three/addons/libs/tween.module.min.js';
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TWEEN } from 'three/addons/libs/tween.module.min.js';
 
-// --- KONFIGURASI BUKU (KEKAL SAMA) ---
-const IMAGE_PATHS = [
-    'img/depan.jpg',      // 0: Muka depan
-    'img/gambar_1.jpg',   // 1
-    'img/gambar_2.jpg',   // 2
-    'img/gambar_3.jpg',   // 3
-    'img/gambar_4.jpg',   // 4
-    'img/gambar_5.jpg',   // 5
-    'img/gambar_6.jpg',   // 6
-    'img/gambar_7.jpg',   // 7
-    'img/gambar_8.jpg',   // 8
-    'img/gambar_9.jpg',   // 9
-    'img/gambar_10.jpg',  // 10
-    'img/gambar_11.jpg',  // 11
-    'img/gambar_12.jpg',  // 12
-    'img/gambar_13.jpg',  // 13
-    'img/gambar_14.jpg',  // 14
-    'img/belakang.jpg'    // 15: Muka belakang
-];
-const NUM_PAGES = IMAGE_PATHS.length;
-const NUM_SHEETS = NUM_PAGES / 2;
-
-// --- KELAS PENGURUSAN SCENE (KEKAL SAMA, TIADA PERUBAHAN) ---
-class SceneManager {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.screenDimensions = { width: window.innerWidth, height: window.innerHeight };
-        this.scene = this._buildScene();
-        this.renderer = this._buildRenderer(this.screenDimensions);
-        this.camera = this._buildCamera(this.screenDimensions);
-        this.controls = this._setupControls();
-        this._createEnvironment();
-        this._setupLights();
-    }
-    _buildScene() {
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
-        return scene;
-    }
-    _buildRenderer({ width, height }) {
-        const renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: "high-performance" });
-        renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        return renderer;
-    }
-    _buildCamera({ width, height }) {
-        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-        camera.position.set(0, 5, 6);
-        return camera;
-    }
-    _setupControls() {
-        const controls = new OrbitControls(this.camera, this.renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.screenSpacePanning = false;
-        controls.minDistance = 2;
-        controls.maxDistance = 15;
-        controls.maxPolarAngle = Math.PI / 2;
-        controls.target.set(0, 2.7, 0);
-        return controls;
-    }
-    _createEnvironment() {
-        const floor = new THREE.Mesh(new THREE.CircleGeometry(25, 64), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.1, roughness: 0.8 }));
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        this.scene.add(floor);
-        const wall = new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 20, 64, 1, true), new THREE.MeshStandardMaterial({ color: 0x222222, side: THREE.BackSide, metalness: 0.2, roughness: 0.9 }));
-        wall.position.y = 10;
-        this.scene.add(wall);
-        const pedestalHeight = 2.5;
-        const pedestalBase = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.8, pedestalHeight, 32), new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.1, roughness: 0.4 }));
-        pedestalBase.position.y = pedestalHeight / 2;
-        pedestalBase.castShadow = true;
-        pedestalBase.receiveShadow = true;
-        this.scene.add(pedestalBase);
-        const slabHeight = 0.2;
-        const slab = new THREE.Mesh(new THREE.BoxGeometry(4, slabHeight, 2.5), new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.1, roughness: 0.4 }));
-        slab.position.y = pedestalHeight + (slabHeight / 2);
-        slab.castShadow = true;
-        slab.receiveShadow = true;
-        this.scene.add(slab);
-    }
-    _setupLights() {
-        this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-        const spotLight = new THREE.SpotLight(0xffffff, 1.0, 30, Math.PI * 0.15, 0.5, 1.5);
-        spotLight.position.set(8, 12, 8);
-        spotLight.target.position.set(0, 2.5, 0);
-        spotLight.castShadow = true;
-        spotLight.shadow.mapSize.width = 1024;
-        spotLight.shadow.mapSize.height = 1024;
-        this.scene.add(spotLight, spotLight.target);
-    }
-    onWindowResize() {
-        this.screenDimensions.width = window.innerWidth;
-        this.screenDimensions.height = window.innerHeight;
-        this.camera.aspect = this.screenDimensions.width / this.screenDimensions.height;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(this.screenDimensions.width, this.screenDimensions.height);
-    }
-    update() {
-        this.controls.update();
-        TWEEN.update();
-        this.renderer.render(this.scene, this.camera);
-    }
-}
-
-// --- KELAS BUKU (DIROMBAK SEPENUHNYA) ---
-class Book {
-    constructor() {
-        // Dimensi dan sifat buku
-        this.BOOK_WIDTH = 2.5;
-        this.BOOK_DEPTH = 1.8;
-        this.PAGE_THICKNESS = 0.008; // FIX 1: Nilai ditingkatkan
-        this.SPINE_OFFSET = 0.01;
+        // --- KONFIGURASI BUKU (KEKAL SAMA) ---
+        const IMAGE_PATHS = [
+            'img/depan.jpg',     // 0: Muka depan
+            'img/gambar_1.jpg',  // 1
+            'img/gambar_2.jpg',  // 2
+            'img/gambar_3.jpg',  // 3
+            'img/gambar_4.jpg',  // 4
+            'img/gambar_5.jpg',  // 5
+            'img/gambar_6.jpg',  // 6
+            'img/gambar_7.jpg',  // 7
+            'img/gambar_8.jpg',  // 8
+            'img/gambar_9.jpg',  // 9
+            'img/gambar_10.jpg', // 10
+            'img/gambar_11.jpg', // 11
+            'img/gambar_12.jpg', // 12
+            'img/gambar_13.jpg', // 13
+            'img/gambar_14.jpg', // 14
+            'img/belakang.jpg'   // 15: Muka belakang
+        ];
+        const NUM_PAGES = IMAGE_PATHS.length;
+        const NUM_SHEETS = NUM_PAGES / 2;
         
-        // Pengurusan keadaan
-        this.sheets = [];
-        this.currentSheetIndex = 0;
-        this.isAnimating = false;
-
-        // Kumpulan utama untuk semua bahagian buku
-        this.mesh = new THREE.Group();
-        this.mesh.position.set(0, 2.8, 0);
-        this.mesh.rotation.x = -Math.PI / 2;
-
-        // Pemuat tekstur
-        this.textureLoader = new THREE.TextureLoader();
-        this.textures = IMAGE_PATHS.map(path => {
-            const texture = this.textureLoader.load(path);
-            texture.flipY = true;
-            return texture;
-        });
-        
-        // Membina buku
-        this._createBook();
-        this._createClickTargets();
-    }
-
-    _createBook() {
-        const pageGeometry = new THREE.PlaneGeometry(this.BOOK_WIDTH, this.BOOK_DEPTH);
-        pageGeometry.translate(this.BOOK_WIDTH / 2, 0, 0);
-
-        for (let i = 0; i < NUM_SHEETS; i++) {
-            const sheetGroup = new THREE.Group();
-            
-            const frontTexture = this.textures[i * 2];
-            const backTexture = this.textures[i * 2 + 1];
-			backTexture.center.set(0.5, 0.5);
-			backTexture.rotation = Math.PI;
-            const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTexture, side: THREE.FrontSide, roughness: 0.6 });
-            const backMaterial = new THREE.MeshStandardMaterial({ map: backTexture, side: THREE.FrontSide, roughness: 0.6 });
-            const frontPage = new THREE.Mesh(pageGeometry, frontMaterial);
-            const backPage = new THREE.Mesh(pageGeometry, backMaterial);
-            
-            backPage.rotation.x = Math.PI;
-            sheetGroup.add(frontPage, backPage);
-            sheetGroup.position.z = -i * this.PAGE_THICKNESS;
-            
-            sheetGroup.renderOrder = i;
-            frontPage.renderOrder = i;
-            backPage.renderOrder = i;
-
-            this.sheets.push(sheetGroup);
-            this.mesh.add(sheetGroup);
-        }
-
-        const spineHeight = NUM_SHEETS * this.PAGE_THICKNESS;
-        // FIX 2: Dimensi dan posisi tulang buku dibetulkan
-        const spineGeometry = new THREE.BoxGeometry(this.SPINE_OFFSET, this.BOOK_DEPTH, spineHeight);
-        const spineMaterial = new THREE.MeshStandardMaterial({ color: 0x3a2e29, roughness: 0.5 });
-        const spine = new THREE.Mesh(spineGeometry, spineMaterial);
-        spine.position.set(0, 0, -spineHeight / 2 + (this.PAGE_THICKNESS / 2));
-        spine.castShadow = true;
-        this.mesh.add(spine);
-    }
-
-    _createClickTargets() {
-        const targetGeometry = new THREE.PlaneGeometry(this.BOOK_WIDTH, this.BOOK_DEPTH);
-        const targetMaterial = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
-        this.rightClickTarget = new THREE.Mesh(targetGeometry, targetMaterial);
-        this.rightClickTarget.position.set(this.BOOK_WIDTH / 2, 0.01, 0);
-        this.leftClickTarget = new THREE.Mesh(targetGeometry.clone(), targetMaterial.clone());
-        this.leftClickTarget.position.set(-this.BOOK_WIDTH / 2, 0.01, 0);
-        this.mesh.add(this.rightClickTarget, this.leftClickTarget);
-    }
-    
-    // FIX 3: Logik animasi dibetulkan sepenuhnya
-    turnPage(direction) {
-		if (this.isAnimating) return;
-
-		const isForward = direction === 'forward';
-
-		if (isForward && this.currentSheetIndex >= this.sheets.length) return;
-		if (!isForward && this.currentSheetIndex <= 0) return;
-
-		this.isAnimating = true;
-
-		// --- PERUBAHAN BERMULA DI SINI ---
-
-		// Dapatkan indeks helaian untuk mengira posisi Z
-		const sheetIndex = isForward ? this.currentSheetIndex : this.currentSheetIndex - 1;
-		const sheetToTurn = this.sheets[sheetIndex];
-
-		const startAngle = sheetToTurn.rotation.y;
-		const endAngle = isForward ? -Math.PI : 0;
-
-		// Tentukan posisi Z sasaran
-		// Apabila ke depan (kiri), Z positif (timbun ke atas).
-		// Apabila ke belakang (kanan), Z kembali ke posisi negatif asal.
-		const targetZ = isForward 
-			? sheetIndex * this.PAGE_THICKNESS - 0.05 
-			: -sheetIndex * this.PAGE_THICKNESS;
-
-		// Tambah 'z' pada proksi animasi, bermula dari posisi semasa
-		const animationProxy = { 
-			angle: startAngle, 
-			z: sheetToTurn.position.z 
-		};
-
-		new TWEEN.Tween(animationProxy)
-			// Animasikan 'angle' DAN 'z' ke posisi sasaran
-			.to({ angle: endAngle, z: targetZ }, 1200)
-			.easing(TWEEN.Easing.Sinusoidal.InOut)
-			.onUpdate(() => {
-				sheetToTurn.rotation.y = animationProxy.angle;
-				// Kemas kini posisi Z dalam setiap frame animasi
-				sheetToTurn.position.z = animationProxy.z; 
-			})
-			.onComplete(() => {
-				this.currentSheetIndex += isForward ? 1 : -1;
-				this.isAnimating = false;
-			})
-			.start();
-    }
-
-
-	
-	    // --- FUNGSI BAHARU: Untuk mencipta zon klik ---
-    _createClickTargets() {
-        const targetGeometry = new THREE.PlaneGeometry(this.BOOK_WIDTH, this.BOOK_DEPTH);
-        const targetMaterial = new THREE.MeshBasicMaterial({
-            visible: false, // Jadikan ia halimunan
-            side: THREE.DoubleSide
-        });
-
-        this.rightClickTarget = new THREE.Mesh(targetGeometry, targetMaterial);
-        this.rightClickTarget.position.set(this.BOOK_WIDTH / 2, 0.01, 0); // Sedikit di atas buku kanan
-        
-
-        this.leftClickTarget = new THREE.Mesh(targetGeometry.clone(), targetMaterial.clone());
-        this.leftClickTarget.position.set(-this.BOOK_WIDTH / 2, 0.01, 0); // Sedikit di atas buku kiri
-        
-        
-        // Tambah sasaran ini ke dalam kumpulan utama buku
-        this.mesh.add(this.rightClickTarget, this.leftClickTarget);
-    } 
-}
-
-// --- KELAS APLIKASI UTAMA (KEKAL SAMA, TIADA PERUBAHAN) ---
-class FlipbookApp {
-    constructor() {
-        this.canvas = document.getElementById('c');
-        this.sceneManager = new SceneManager(this.canvas);
-        this.raycaster = new THREE.Raycaster();
-        this.mouse = new THREE.Vector2();
-        
-        // Cipta objek buku baharu
-        this.book = new Book();
-        this.sceneManager.scene.add(this.book.mesh);
-        
-        window.addEventListener('resize', () => this.sceneManager.onWindowResize());
-        window.addEventListener('click', this.onMouseClick.bind(this));
-        
-        this.animate();
-    }
-
-    onMouseClick(event) {
-        if (this.book.isAnimating) return;
-        
-        this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        this.mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
-        
-        this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
-        
-        // Hanya semak persilangan dengan sasaran klik yang spesifik
-        const targets = [this.book.leftClickTarget, this.book.rightClickTarget];
-        const intersects = this.raycaster.intersectObjects(targets);
-        
-        if (intersects.length > 0) {
-            const clickedObject = intersects[0].object;
-
-            if (clickedObject === this.book.rightClickTarget) {
-                this.book.turnPage('forward');
-            } else if (clickedObject === this.book.leftClickTarget) {
-                this.book.turnPage('backward');
+        // --- KELAS PENGURUSAN SCENE (TIADA PERUBAHAN) ---
+        class SceneManager {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.screenDimensions = { width: window.innerWidth, height: window.innerHeight };
+                this.scene = this._buildScene();
+                this.renderer = this._buildRenderer(this.screenDimensions);
+                this.camera = this._buildCamera(this.screenDimensions);
+                this.controls = this._setupControls();
+                this._createEnvironment();
+                this._setupLights();
+            }
+            _buildScene() {
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x1a1a1a);
+                return scene;
+            }
+            _buildRenderer({ width, height }) {
+                const renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: "high-performance" });
+                renderer.setSize(width, height);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                return renderer;
+            }
+            _buildCamera({ width, height }) {
+                const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+                camera.position.set(0, 5, 6);
+                return camera;
+            }
+            _setupControls() {
+                const controls = new OrbitControls(this.camera, this.renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.screenSpacePanning = false;
+                controls.minDistance = 2;
+                controls.maxDistance = 15;
+                controls.maxPolarAngle = Math.PI / 2;
+                controls.target.set(0, 2.7, 0);
+                return controls;
+            }
+            _createEnvironment() {
+                const floor = new THREE.Mesh(new THREE.CircleGeometry(25, 64), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.1, roughness: 0.8 }));
+                floor.rotation.x = -Math.PI / 2;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+                const wall = new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 20, 64, 1, true), new THREE.MeshStandardMaterial({ color: 0x222222, side: THREE.BackSide, metalness: 0.2, roughness: 0.9 }));
+                wall.position.y = 10;
+                this.scene.add(wall);
+                const pedestalHeight = 2.5;
+                const pedestalBase = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.8, pedestalHeight, 32), new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.1, roughness: 0.4 }));
+                pedestalBase.position.y = pedestalHeight / 2;
+                pedestalBase.castShadow = true;
+                pedestalBase.receiveShadow = true;
+                this.scene.add(pedestalBase);
+                const slabHeight = 0.2;
+                const slab = new THREE.Mesh(new THREE.BoxGeometry(4, slabHeight, 2.5), new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.1, roughness: 0.4 }));
+                slab.position.y = pedestalHeight + (slabHeight / 2);
+                slab.castShadow = true;
+                slab.receiveShadow = true;
+                this.scene.add(slab);
+            }
+            _setupLights() {
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+                const spotLight = new THREE.SpotLight(0xffffff, 1.0, 30, Math.PI * 0.15, 0.5, 1.5);
+                spotLight.position.set(8, 12, 8);
+                spotLight.target.position.set(0, 2.5, 0);
+                spotLight.castShadow = true;
+                spotLight.shadow.mapSize.width = 1024;
+                spotLight.shadow.mapSize.height = 1024;
+                this.scene.add(spotLight, spotLight.target);
+            }
+            onWindowResize() {
+                this.screenDimensions.width = window.innerWidth;
+                this.screenDimensions.height = window.innerHeight;
+                this.camera.aspect = this.screenDimensions.width / this.screenDimensions.height;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(this.screenDimensions.width, this.screenDimensions.height);
+            }
+            update() {
+                this.controls.update();
+                TWEEN.update();
+                this.renderer.render(this.scene, this.camera);
             }
         }
-    }
-    
-    animate() {
-        requestAnimationFrame(this.animate.bind(this));
-        this.sceneManager.update();
-    }
-}
+        
+        // --- KELAS BUKU (KOD STABIL DARIPADA TUAN - TIADA PERUBAHAN) ---
+        class Book {
+             constructor() {
+                this.BOOK_WIDTH = 2.5;
+                this.BOOK_DEPTH = 1.8;
+                this.PAGE_THICKNESS = 0.008; 
+                this.SPINE_OFFSET = 0.01;
+                
+                this.sheets = [];
+                this.currentSheetIndex = 0;
+                this.isAnimating = false;
 
-const app = new FlipbookApp();
+                this.mesh = new THREE.Group();
+                this.mesh.position.set(0, 2.8, 0);
+                this.mesh.rotation.x = -Math.PI / 2;
+
+                this.textureLoader = new THREE.TextureLoader();
+                this.textures = IMAGE_PATHS.map(path => {
+                    const texture = this.textureLoader.load(path);
+                    texture.flipY = true;
+                    return texture;
+                });
+                
+                this._createBook();
+                this._createClickTargets();
+            }
+
+            _createBook() {
+                const pageGeometry = new THREE.PlaneGeometry(this.BOOK_WIDTH, this.BOOK_DEPTH);
+                pageGeometry.translate(this.BOOK_WIDTH / 2, 0, 0);
+
+                for (let i = 0; i < NUM_SHEETS; i++) {
+                    const sheetGroup = new THREE.Group();
+                    
+                    const frontTexture = this.textures[i * 2];
+                    const backTexture = this.textures[i * 2 + 1];
+                    backTexture.center.set(0.5, 0.5);
+                    backTexture.rotation = Math.PI;
+                    const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTexture, side: THREE.FrontSide, roughness: 0.6 });
+                    const backMaterial = new THREE.MeshStandardMaterial({ map: backTexture, side: THREE.FrontSide, roughness: 0.6 });
+                    const frontPage = new THREE.Mesh(pageGeometry, frontMaterial);
+                    const backPage = new THREE.Mesh(pageGeometry, backMaterial);
+                    
+                    backPage.rotation.x = Math.PI;
+                    sheetGroup.add(frontPage, backPage);
+                    sheetGroup.position.z = -i * this.PAGE_THICKNESS;
+                    
+                    sheetGroup.renderOrder = i;
+                    frontPage.renderOrder = i;
+                    backPage.renderOrder = i;
+
+                    this.sheets.push(sheetGroup);
+                    this.mesh.add(sheetGroup);
+                }
+
+                const spineHeight = NUM_SHEETS * this.PAGE_THICKNESS;
+                const spineGeometry = new THREE.BoxGeometry(this.SPINE_OFFSET, this.BOOK_DEPTH, spineHeight);
+                const spineMaterial = new THREE.MeshStandardMaterial({ color: 0x3a2e29, roughness: 0.5 });
+                const spine = new THREE.Mesh(spineGeometry, spineMaterial);
+                spine.position.set(0, 0, -spineHeight / 2 + (this.PAGE_THICKNESS / 2));
+                spine.castShadow = true;
+                this.mesh.add(spine);
+            }
+
+            _createClickTargets() {
+                const targetGeometry = new THREE.PlaneGeometry(this.BOOK_WIDTH, this.BOOK_DEPTH);
+                const targetMaterial = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
+                this.rightClickTarget = new THREE.Mesh(targetGeometry, targetMaterial);
+                this.rightClickTarget.position.set(this.BOOK_WIDTH / 2, 0.01, 0);
+                this.leftClickTarget = new THREE.Mesh(targetGeometry.clone(), targetMaterial.clone());
+                this.leftClickTarget.position.set(-this.BOOK_WIDTH / 2, 0.01, 0);
+                this.mesh.add(this.rightClickTarget, this.leftClickTarget);
+            }
+            
+            turnPage(direction) {
+                if (this.isAnimating) return;
+                const isForward = direction === 'forward';
+                if (isForward && this.currentSheetIndex >= this.sheets.length) return;
+                if (!isForward && this.currentSheetIndex <= 0) return;
+                this.isAnimating = true;
+
+                const sheetIndex = isForward ? this.currentSheetIndex : this.currentSheetIndex - 1;
+                const sheetToTurn = this.sheets[sheetIndex];
+                const startAngle = sheetToTurn.rotation.y;
+                const endAngle = isForward ? -Math.PI : 0;
+                const targetZ = isForward ? sheetIndex * this.PAGE_THICKNESS - 0.05 : -sheetIndex * this.PAGE_THICKNESS;
+                const animationProxy = { angle: startAngle, z: sheetToTurn.position.z };
+
+                new TWEEN.Tween(animationProxy)
+                    .to({ angle: endAngle, z: targetZ }, 1200)
+                    .easing(TWEEN.Easing.Sinusoidal.InOut)
+                    .onUpdate(() => {
+                        sheetToTurn.rotation.y = animationProxy.angle;
+                        sheetToTurn.position.z = animationProxy.z; 
+                    })
+                    .onComplete(() => {
+                        this.currentSheetIndex += isForward ? 1 : -1;
+                        this.isAnimating = false;
+                    })
+                    .start();
+            }
+        }
+
+        // --- KELAS APLIKASI UTAMA (DENGAN PENAMBAHBAIKAN) ---
+        class FlipbookApp {
+            constructor() {
+                this.canvas = document.getElementById('c');
+                this.sceneManager = new SceneManager(this.canvas);
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                
+                this.book = new Book();
+                this.sceneManager.scene.add(this.book.mesh);
+                
+                this.isMobile = 'ontouchstart' in window;
+                
+                // NEW: Touch detection variables
+                this.touchStartX = 0;
+                this.touchStartY = 0;
+                this.touchStartTime = 0;
+
+                this._setupEventListeners();
+                this.animate();
+            }
+
+            _setupEventListeners() {
+                window.addEventListener('resize', () => this.sceneManager.onWindowResize());
+                
+                if (this.isMobile) {
+                    document.getElementById('desktop-instructions').style.display = 'none';
+                    document.getElementById('mobile-instructions').style.display = 'inline';
+                    this.sceneManager.controls.enabled = false; // Disable OrbitControls by default
+                    
+                    this.canvas.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
+                    this.canvas.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+                    this.canvas.addEventListener('touchend', this.onTouchend.bind(this), { passive: false });
+                } else {
+                    this.canvas.addEventListener('click', this.onMouseClick.bind(this));
+                }
+            }
+
+            // --- NEW: Mobile Touch Handlers ---
+            onTouchStart(event) {
+                // For turning pages (single touch)
+                if (event.touches.length === 1) {
+                    this.touchStartX = event.touches[0].clientX;
+                    this.touchStartY = event.touches[0].clientY;
+                    this.touchStartTime = Date.now();
+                }
+                // Allow OrbitControls for multi-touch gestures (zoom/pan)
+                this.sceneManager.controls.enabled = (event.touches.length > 1);
+                this.sceneManager.controls.onTouchStart(event);
+            }
+
+            onTouchMove(event) {
+                // Allow OrbitControls to handle camera movement
+                this.sceneManager.controls.onTouchMove(event);
+            }
+
+            onTouchend(event) {
+                // If it was a multi-touch gesture, let OrbitControls finish and do nothing else
+                if (event.touches.length > 0) { 
+                    this.sceneManager.controls.onTouchEnd(event);
+                    return;
+                }
+                
+                this.sceneManager.controls.enabled = false; // Disable after multi-touch ends
+                this.sceneManager.controls.onTouchEnd(event);
+
+                const touchEndX = event.changedTouches[0].clientX;
+                const touchEndY = event.changedTouches[0].clientY;
+                const touchTime = Date.now() - this.touchStartTime;
+                const deltaX = touchEndX - this.touchStartX;
+                const deltaY = touchEndY - this.touchStartY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                // Check if it's a "tap" (short duration, small movement)
+                if (touchTime < 200 && distance < 10) {
+                    this.handleTap(event.changedTouches[0]);
+                }
+            }
+            
+            // NEW: Logic for handling a confirmed tap
+            handleTap(touchEvent) {
+                if (this.book.isAnimating) return;
+                
+                this.mouse.x = (touchEvent.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = - (touchEvent.clientY / window.innerHeight) * 2 + 1;
+                this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
+                
+                const targets = [this.book.leftClickTarget, this.book.rightClickTarget];
+                const intersects = this.raycaster.intersectObjects(targets);
+                
+                if (intersects.length > 0) {
+                    const clickedObject = intersects[0].object;
+                    if (clickedObject === this.book.rightClickTarget) {
+                        this.book.turnPage('forward');
+                    } else if (clickedObject === this.book.leftClickTarget) {
+                        this.book.turnPage('backward');
+                    }
+                }
+            }
+            
+            onMouseClick(event) {
+                this.handleTap(event); // Desktop click uses the same logic as a mobile tap
+            }
+            
+            animate() {
+                requestAnimationFrame(this.animate.bind(this));
+                this.sceneManager.update();
+            }
+        }
+
+        const app = new FlipbookApp();
     </script>
 </body>
 </html>
-
-
 
