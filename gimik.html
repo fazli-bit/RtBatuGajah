@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Pengecaman Wajah</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@latest/dist/face-api.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.1.0/dist/tf-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.1.0/dist/tf-backend-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection@2.0.1/dist/hand-pose-detection.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
@@ -34,6 +34,7 @@
             font-family: 'Poppins', sans-serif;
             color: var(--text-color);
             box-sizing: border-box;
+            cursor: default; /* Set cursor default */
         }
         #app-container {
             width: 100vw;
@@ -59,6 +60,7 @@
             height: 100%;
             transform: scaleX(-1); /* Invert video feed */
             object-fit: cover;
+            display: none; /* Hidden by default */
         }
         #overlay-canvas {
             position: absolute;
@@ -88,49 +90,12 @@
             border-radius: var(--border-radius);
             outline: 1px solid rgba(255, 255, 255, 0.2); /* Garis sempadan ditambah */
         }
-        #hand-guide-box {
-            display: none;
-            position: absolute;
-            bottom: 1rem;
-            right: 1rem;
-            width: 140px;
-            height: 180px;
-            border: 3px solid rgba(255, 255, 255, 0.5);
-            border-radius: var(--border-radius);
-            z-index: 20;
-            color: white;
-            font-family: 'Poppins', sans-serif;
-            font-size: 16px;
-            overflow: hidden;
-            transition: border-color 0.3s ease;
-        }
-        #hand-guide-box .content {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-        #hand-loading-bar {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 100%;
-            width: 0%;
-            background-color: rgba(255, 255, 255, 0.3);
-            z-index: -1;
-            transition: width 2s linear, background-color 0.3s;
-        }
-        #hand-guide-box.detecting { border-color: var(--danger-color); }
-        #hand-guide-box.detecting #hand-loading-bar { width: 100%; }
-        #hand-guide-box.verified { border-color: var(--matrix-green); }
-        #hand-guide-box.verified #hand-loading-bar { width: 100%; background-color: rgba(57, 255, 20, 0.3); }
-
+        
         #controls {
             padding: 1.5rem;
             background-color: #ffffff;
             border-top: 1px solid #dee2e6;
+            z-index: 200; /* Ensure controls are on top */
         }
         .btn-group {
             display: flex;
@@ -149,11 +114,15 @@
             transition: background-color 0.2s, transform 0.2s;
             color: white;
         }
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         .btn:active { transform: scale(0.98); }
         #register-btn { background-color: var(--primary-color); }
         #recognize-btn { background-color: var(--success-color); }
         
-        #registration-form, #registration-choice, #recognition-controls, #update-confirmation {
+        #registration-form, #registration-choice, #update-confirmation {
             display: none;
             flex-direction: column;
             gap: 1rem;
@@ -233,8 +202,8 @@
             z-index: 0;
         }
         .success-content {
-             position: relative;
-             z-index: 1;
+            position: relative;
+            z-index: 1;
         }
         #success-screen h1 {
             font-size: 2.5rem;
@@ -243,14 +212,6 @@
         }
         #success-screen p {
             font-size: 1.5rem;
-        }
-        #reset-btn {
-            position: absolute;
-            bottom: 2rem;
-            z-index: 1;
-            background-color: var(--secondary-color);
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
         }
         #version-info {
             text-align: right;
@@ -270,12 +231,6 @@
         </div>
         <video id="video" playsinline autoplay muted></video>
         <canvas id="overlay-canvas"></canvas>
-        <div id="hand-guide-box">
-             <div id="hand-loading-bar"></div>
-             <div class="content">
-                <span id="hand-guide-text">Letakkan tangan anda di sini</span>
-             </div>
-        </div>
     </div>
     <div id="controls">
         <div id="main-menu" class="btn-group">
@@ -284,8 +239,8 @@
         </div>
         <div id="registration-choice">
              <div class="btn-group">
-                <button id="register-camera-btn" class="btn" style="background-color: var(--primary-color);">Guna Kamera</button>
-                <button id="register-image-btn" class="btn" style="background-color: var(--primary-color);">Muat Naik Gambar</button>
+                 <button id="register-camera-btn" class="btn" style="background-color: var(--primary-color);">Guna Kamera</button>
+                 <button id="register-image-btn" class="btn" style="background-color: var(--primary-color);">Muat Naik Gambar</button>
              </div>
              <button id="cancel-choice-btn" class="btn" style="background-color: var(--secondary-color); margin-top: 1rem;">Batal</button>
         </div>
@@ -293,7 +248,7 @@
              <div id="image-upload-group" class="form-group" style="display: none;">
                  <label for="image-upload-input">Pilih Gambar Potret:</label>
                  <input type="file" id="image-upload-input" accept="image/*">
-            </div>
+             </div>
             <div class="form-group">
                 <label for="name-input">Nama:</label>
                 <input type="text" id="name-input" required placeholder="Cth: Ali Ayub">
@@ -314,11 +269,8 @@
                 <button id="cancel-update-btn" class="btn" style="background-color: var(--secondary-color);">Batal</button>
             </div>
         </div>
-        <div id="recognition-controls">
-            <button id="back-btn" class="btn" style="background-color: var(--secondary-color);">Kembali ke Menu Utama</button>
-        </div>
         <div id="status-message"></div>
-        <div id="version-info">versi 0.1</div>
+        <div id="version-info">versi 1.5.0</div>
     </div>
     <div id="success-screen">
         <canvas id="matrix-canvas"></canvas>
@@ -326,7 +278,6 @@
             <h1 id="success-title"></h1>
             <p id="success-subtitle"></p>
         </div>
-        <button id="reset-btn" class="btn">Kembali ke Menu Utama</button>
     </div>
     <div id="loading-overlay">
         <div id="loading-text">Memuatkan Model AI...</div>
@@ -343,27 +294,25 @@
 
     // --- KONFIGURASI FIREBASE ---
     const firebaseConfig = {
-      apiKey: "AIzaSyDrICpXd4ukkpnoFrRleTzEcR87vIoTM3s",
-      authDomain: "gimikrt-cf2e4.firebaseapp.com",
-      projectId: "gimikrt-cf2e4",
-      storageBucket: "gimikrt-cf2e4.appspot.com",
-      messagingSenderId: "878304778253",
-      appId: "1:878304778253:web:470cc421f6cf6ba0f21d44",
-      measurementId: "G-FBMMM8ZG14"
+     apiKey: "AIzaSyDrICpXd4ukkpnoFrRleTzEcR87vIoTM3s",
+     authDomain: "gimikrt-cf2e4.firebaseapp.com",
+     projectId: "gimikrt-cf2e4",
+     storageBucket: "gimikrt-cf2e4.appspot.com",
+     messagingSenderId: "878304778253",
+     appId: "1:878304778253:web:470cc421f6cf6ba0f21d44",
+     measurementId: "G-FBMMM8ZG14"
     };
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-
     const video = document.getElementById('video');
     const overlayCanvas = document.getElementById('overlay-canvas');
+    const controls = document.getElementById('controls');
     const mainMenu = document.getElementById('main-menu');
     const registerBtn = document.getElementById('register-btn');
     const recognizeBtn = document.getElementById('recognize-btn');
-    const recognitionControls = document.getElementById('recognition-controls');
-    const backBtn = document.getElementById('back-btn');
     const registrationChoice = document.getElementById('registration-choice');
     const registerCameraBtn = document.getElementById('register-camera-btn');
     const registerImageBtn = document.getElementById('register-image-btn');
@@ -375,12 +324,9 @@
     const statusMessage = document.getElementById('status-message');
     const placeholder = document.getElementById('placeholder');
     const errorMessage = document.getElementById('error-message');
-    const handGuideBox = document.getElementById('hand-guide-box');
-    const handGuideText = document.getElementById('hand-guide-text');
     const successScreen = document.getElementById('success-screen');
     const successTitle = document.getElementById('success-title');
     const successSubtitle = document.getElementById('success-subtitle');
-    const resetBtn = document.getElementById('reset-btn');
     const matrixCanvas = document.getElementById('matrix-canvas');
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingText = document.getElementById('loading-text');
@@ -398,10 +344,13 @@
     let firstMatchTime = null;
     let handDetector = null;
     let handVerificationTimer = null;
+    let secondAuthReadyTime = null;
     let matrixAnimationId = null;
     let areModelsLoaded = false;
     let userToUpdate = null;
     let registrationScanInterval = null;
+    let scanFrame = 0; // Untuk animasi gimik
+    let fingerprintImage = new Image();
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
@@ -427,14 +376,21 @@
         progressBar.style.width = '0%';
     }
 
+    async function initializeAppFlow() {
+        registerBtn.disabled = true;
+        recognizeBtn.disabled = true;
+        await loadAllModels();
+        await loadRegisteredUsers();
+    }
 
-    async function loadModels(onComplete) {
+
+    async function loadAllModels(onComplete) {
         if (areModelsLoaded) {
             if (onComplete) onComplete();
             return;
         }
 
-        showLoadingBar('Memuatkan Model AI...', 2);
+        showLoadingBar('Memuatkan Model AI...', 3);
         
         try {
             await Promise.all([
@@ -446,7 +402,7 @@
             const model = handPoseDetection.SupportedModels.MediaPipeHands;
             const detectorConfig = {
               runtime: 'mediapipe',
-              solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands',
+              solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240',
               modelType: 'lite'
             };
             handDetector = await handPoseDetection.createDetector(model, detectorConfig);
@@ -455,7 +411,7 @@
             setTimeout(() => {
                 hideLoadingBar();
                 if (onComplete) onComplete();
-            }, 2000);
+            }, 3000);
 
         } catch (err) {
             console.error(err);
@@ -491,11 +447,12 @@
                 );
                 faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
                 statusMessage.innerText = `Sistem Sedia.`;
-                recognizeBtn.style.display = 'flex';
+                recognizeBtn.disabled = false;
             } else {
                 statusMessage.innerText = 'Tiada pengguna didaftarkan. Sila daftar.';
                 recognizeBtn.style.display = 'none';
             }
+            registerBtn.disabled = false;
         } catch (e) {
             console.error("Error fetching users: ", e);
             showError("Gagal memuatkan data pengguna.");
@@ -505,11 +462,12 @@
     
     async function startCamera() {
         try {
-            if (stream) return true;
-            video.style.display = 'block';
+            if (stream) {
+                video.play();
+                return true;
+            };
             stream = await navigator.mediaDevices.getUserMedia({ video: true });
             video.srcObject = stream;
-            placeholder.style.display = 'none';
             return true;
         } catch (err) {
             showError("Tidak dapat mengakses kamera.");
@@ -522,6 +480,14 @@
             stream.getTracks().forEach(track => track.stop());
             stream = null;
         }
+    }
+    
+    function showVideoFeed() {
+        video.style.display = 'block';
+        placeholder.style.display = 'none';
+    }
+
+    function hideVideoFeed() {
         video.style.display = 'none';
         placeholder.style.display = 'flex';
     }
@@ -558,17 +524,88 @@
         drawMatrixText(context, textLines[1], startX + 10, startY + 25, 20);
         drawMatrixText(context, textLines[2], startX + 10, startY + 50, 20);
     }
+
+    // --- FUNGSI GIMIK BARU ---
+    function drawIrisScan(context, landmarks) {
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+
+        [leftEye, rightEye].forEach(eye => {
+            const eyeCenter = eye.reduce((acc, point) => ({
+                x: acc.x + point.x / eye.length,
+                y: acc.y + point.y / eye.length
+            }), { x: 0, y: 0 });
+
+            const flippedEyeCenterX = overlayCanvas.width - eyeCenter.x;
+
+            context.strokeStyle = 'rgba(57, 255, 20, 0.7)';
+            context.lineWidth = 1.5;
+
+            // Bulatan beranimasi
+            const radius = 10 + 5 * Math.sin(scanFrame * 0.2);
+            context.beginPath();
+            context.arc(flippedEyeCenterX, eyeCenter.y, Math.abs(radius), 0, 2 * Math.PI);
+            context.stroke();
+
+            // Garisan berputar
+            const angle = scanFrame * 0.1;
+            const lineLength = 25;
+            context.beginPath();
+            context.moveTo(
+                flippedEyeCenterX - Math.cos(angle) * lineLength, 
+                eyeCenter.y - Math.sin(angle) * lineLength
+            );
+            context.lineTo(
+                flippedEyeCenterX + Math.cos(angle) * lineLength, 
+                eyeCenter.y + Math.sin(angle) * lineLength
+            );
+            context.stroke();
+        });
+    }
+
+    function drawFingerprintScan(context, hands) {
+        if (!fingerprintImage.complete || hands.length === 0) return;
+        
+        const wrist = hands[0].keypoints[0]; // Guna pergelangan tangan pertama yang dikesan
+        const videoRect = video.getBoundingClientRect();
+        const wristX = (wrist.x / video.videoWidth) * videoRect.width;
+        const wristY = (wrist.y / video.videoHeight) * videoRect.height;
+        const flippedWristX = overlayCanvas.width - wristX;
+
+        const imgSize = 100;
+        context.globalAlpha = 0.8;
+        context.drawImage(fingerprintImage, flippedWristX - imgSize / 2, wristY - imgSize / 2, imgSize, imgSize);
+        
+        // Animasi garisan imbasan
+        const scanLineHeight = 4;
+        const scanLineY = (scanFrame * 2 % (imgSize + scanLineHeight)) - scanLineHeight;
+
+        context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--matrix-green').trim();
+        context.shadowColor = getComputedStyle(document.documentElement).getPropertyValue('--matrix-green').trim();
+        context.shadowBlur = 15;
+        
+        context.fillRect(
+            flippedWristX - imgSize / 2,
+            (wristY - imgSize / 2) + scanLineY,
+            imgSize,
+            scanLineHeight
+        );
+
+        context.shadowBlur = 0;
+        context.globalAlpha = 1.0;
+    }
+    // --- TAMAT FUNGSI GIMIK ---
     
     function showSuccessScreen() {
         clearAllIntervals();
         stopCamera();
-        recognitionControls.style.display = 'none';
-        handGuideBox.style.display = 'none';
 
         showLoadingBar('Memproses Pelancaran...', 1);
         setTimeout(() => {
             hideLoadingBar();
             unloadModels();
+            
+            window.addEventListener('keydown', handleEscKey); // Listen for Esc key
 
             successScreen.style.display = 'flex';
             setTimeout(() => {
@@ -584,100 +621,92 @@
     }
 
     function startRecognition() {
-        loadModels(() => {
-            clearAllIntervals();
-            startCamera().then(success => {
-                if (!success) return;
-                statusMessage.innerText = "";
-                mainMenu.style.display = 'none';
-                recognitionControls.style.display = 'flex';
-                firstMatchTime = null;
+        clearAllIntervals();
+        startCamera().then(success => {
+            if (!success) return;
+            showVideoFeed();
+            controls.style.display = 'none'; // Hide controls for fullscreen view
+            firstMatchTime = null;
+            
+            window.addEventListener('keydown', handleEscKey); // Listen for Esc key
 
-                const displaySize = { width: video.clientWidth, height: video.clientHeight };
-                faceapi.matchDimensions(overlayCanvas, displaySize);
+            const displaySize = { width: video.clientWidth, height: video.clientHeight };
+            faceapi.matchDimensions(overlayCanvas, displaySize);
 
-                detectionInterval = setInterval(async () => {
-                    const [faceDetections, hands] = await Promise.all([
-                        faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors(),
-                        handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
-                    ]);
-                    
-                    const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
-                    const context = overlayCanvas.getContext('2d');
-                    context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-                    
-                    let recognizedFaceFoundThisFrame = false;
-                    
-                    if (resizedDetections.length > 0) {
-                        resizedDetections.forEach(detection => {
-                             if (detection.detection.score < 0.5) return;
+            detectionInterval = setInterval(async () => {
+                scanFrame++; // Increment frame kaunter untuk animasi
+                const [faceDetections, hands] = await Promise.all([
+                    faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors(),
+                    handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
+                ]);
+                
+                const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
+                const context = overlayCanvas.getContext('2d');
+                context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                
+                let recognizedFaceFoundThisFrame = false;
+                
+                if (resizedDetections.length > 0) {
+                    resizedDetections.forEach(detection => {
+                        if (detection.detection.score < 0.5) return;
 
-                            const { flippedBox, bestMatch, score } = processDetection(detection);
-                            
-                            if (bestMatch.label !== 'unknown') {
-                                recognizedFaceFoundThisFrame = true;
-                                if (firstMatchTime === null) firstMatchTime = Date.now();
-                                new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
-                                if (Date.now() - firstMatchTime < 1000) {
-                                    drawMatrixText(context, "ID DISAHKAN...", flippedBox.x + flippedBox.width / 2 - 80, flippedBox.y + flippedBox.height / 2);
-                                } else {
-                                    const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
-                                    drawMatrixInfo(context, flippedBox, matchedUser.name, matchedUser.position, score);
-                                }
+                        // --- GIMIK IRIS ---
+                        drawIrisScan(context, detection.landmarks);
+                        
+                        const { flippedBox, bestMatch, score } = processDetection(detection);
+                        
+                        if (bestMatch.label !== 'unknown') {
+                            recognizedFaceFoundThisFrame = true;
+                            if (firstMatchTime === null) firstMatchTime = Date.now();
+                            new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
+                            if (Date.now() - firstMatchTime < 1000) {
+                                drawMatrixText(context, "ID DISAHKAN...", flippedBox.x + flippedBox.width / 2 - 80, flippedBox.y + flippedBox.height / 2);
                             } else {
-                                new faceapi.draw.DrawBox(flippedBox, { label: `Pengecaman... (${score.toFixed(2)})`, boxColor: 'rgba(255, 193, 7, 0.7)' }).draw(overlayCanvas);
-                            }
-                        });
-                    }
-                    
-                    if (recognizedFaceFoundThisFrame && Date.now() - firstMatchTime >= 1000) {
-                        // Hand guide logic
-                        handGuideBox.style.display = 'flex';
-                        let handInPosition = false;
-                        const handGuideRect = handGuideBox.getBoundingClientRect();
-                        const videoRect = video.getBoundingClientRect();
-                        if (hands.length > 0) {
-                            hands.forEach(hand => {
-                                const wrist = hand.keypoints[0];
-                                const wristX = (wrist.x / video.videoWidth) * videoRect.width;
-                                const wristY = (wrist.y / video.videoHeight) * videoRect.height;
-                                const flippedWristX = videoRect.width - wristX;
-
-                                if (flippedWristX > handGuideRect.left - videoRect.left && flippedWristX < handGuideRect.right - videoRect.left &&
-                                    wristY > handGuideRect.top - videoRect.top && wristY < handGuideRect.bottom - videoRect.top) {
-                                    handInPosition = true;
-                                }
-                            });
-                        }
-                        if (handInPosition) {
-                            if (!handGuideBox.classList.contains('detecting') && !handGuideBox.classList.contains('verified')) {
-                                handGuideBox.classList.add('detecting');
-                                handGuideText.textContent = "Pengesahan kedua...";
-                                handVerificationTimer = setTimeout(() => {
-                                    handGuideBox.classList.remove('detecting');
-                                    handGuideBox.classList.add('verified');
-                                    handGuideText.textContent = "Pengesahan Berjaya";
-                                    setTimeout(showSuccessScreen, 500);
-                                }, 2000);
+                                const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
+                                drawMatrixInfo(context, flippedBox, matchedUser.name, matchedUser.position, score);
                             }
                         } else {
-                            clearTimeout(handVerificationTimer);
-                            handVerificationTimer = null;
-                            handGuideBox.classList.remove('detecting', 'verified');
-                            handGuideText.textContent = 'Letakkan tangan anda di sini';
+                            new faceapi.draw.DrawBox(flippedBox, { label: `Pengecaman... (${score.toFixed(2)})`, boxColor: 'rgba(255, 193, 7, 0.7)' }).draw(overlayCanvas);
                         }
-                    } else {
-                        handGuideBox.style.display = 'none';
+                    });
+                }
+                
+                if (recognizedFaceFoundThisFrame && Date.now() - firstMatchTime >= 1000) {
+                    if (secondAuthReadyTime === null) {
+                        secondAuthReadyTime = Date.now() + 5000;
                     }
 
-                    if (!recognizedFaceFoundThisFrame) {
-                        firstMatchTime = null;
+                    if (Date.now() < secondAuthReadyTime) {
+                        const secondsLeft = Math.ceil((secondAuthReadyTime - Date.now()) / 1000);
+                        drawMatrixText(context, `BERSEDIA UNTUK PENGESAHAN KEDUA DALAM ${secondsLeft}...`, overlayCanvas.width / 2 - 280, 50);
+                        if (handVerificationTimer) { clearTimeout(handVerificationTimer); handVerificationTimer = null; }
+                    } else {
+                        const isHandDetected = hands.length > 0;
+                        if (isHandDetected) {
+                            if (!handVerificationTimer) {
+                                handVerificationTimer = setTimeout(showSuccessScreen, 2000);
+                            }
+                            // --- GIMIK CAP JARI ---
+                            drawFingerprintScan(context, hands);
+                            drawMatrixText(context, "MENGIMBAS CAP JARI...", overlayCanvas.width / 2 - 130, 50);
+                        } else {
+                            if (handVerificationTimer) { clearTimeout(handVerificationTimer); handVerificationTimer = null; }
+                            drawMatrixText(context, "TUNJUKKAN TAPAK TANGAN UNTUK PENGESAHAN", overlayCanvas.width / 2 - 250, 50);
+                        }
                     }
-                    if (resizedDetections.filter(d=>d.detection.score >= 0.5).length === 0) {
-                         drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2 - 150, overlayCanvas.height / 2);
-                    }
-                }, 100);
-            });
+                } else {
+                    secondAuthReadyTime = null;
+                    if (handVerificationTimer) { clearTimeout(handVerificationTimer); handVerificationTimer = null; }
+                }
+
+                if (!recognizedFaceFoundThisFrame) {
+                    firstMatchTime = null;
+                    secondAuthReadyTime = null;
+                }
+                if (resizedDetections.filter(d=>d.detection.score >= 0.5).length === 0) {
+                    drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2 - 150, overlayCanvas.height / 2);
+                }
+            }, 100);
         });
     }
 
@@ -702,8 +731,10 @@
         registrationChoice.style.display = 'none';
         startCamera().then(success => {
             if (!success) return;
+            showVideoFeed();
             imageUploadGroup.style.display = 'none';
             registrationForm.style.display = 'flex';
+            mainMenu.style.display = 'none';
             
             document.getElementById('name-input').value = '';
             document.getElementById('position-input').value = '';
@@ -758,10 +789,11 @@
 
     function startImageUploadRegistration() {
         clearAllIntervals();
-        stopCamera();
+        hideVideoFeed();
         registrationChoice.style.display = 'none';
         imageUploadGroup.style.display = 'flex';
         registrationForm.style.display = 'flex';
+        mainMenu.style.display = 'none';
         statusMessage.innerText = "Lengkapkan borang dan muat naik gambar.";
         setPlaceholderContent('<span>Sila muat naik gambar</span>');
     }
@@ -818,7 +850,7 @@
                 descriptor: descriptorArray
             });
             statusMessage.innerText = "Pendaftaran Berjaya!";
-            handleCancel();
+            setTimeout(handleCancel, 2000);
         } catch (e) {
             console.error("Error adding document: ", e);
             statusMessage.innerText = "Pendaftaran Gagal. Sila lihat konsol.";
@@ -836,7 +868,7 @@
                 descriptor: userToUpdate.descriptor
             });
             statusMessage.innerText = "Data berjaya dikemas kini!";
-            handleCancel();
+            setTimeout(handleCancel, 2000);
         } catch (e) {
             console.error("Error updating document: ", e);
             statusMessage.innerText = "Gagal mengemas kini data.";
@@ -868,7 +900,7 @@
     
     function decodeTextEffect(finalText, element, callback) {
         let i = 0;
-        const alphabet = 'アァカサタナハマヤャラワABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*&%$#@!';
+        const alphabet = 'アァカサタナハマヤャラワABCDEFGHIJKLMNOPQRSTUVWXYZ012356789*&%$#@!';
         element.style.opacity = 1;
         element.textContent = '';
 
@@ -895,7 +927,7 @@
         matrixCanvas.height = matrixCanvas.clientHeight;
 
         const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
-        const alphabet = katakana + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const alphabet = katakana + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012356789';
         const fontSize = 16;
         const columns = matrixCanvas.width / fontSize;
         const rainDrops = Array.from({ length: Math.ceil(columns) }).fill(1);
@@ -930,23 +962,39 @@
         if(matrixAnimationId) cancelAnimationFrame(matrixAnimationId);
         matrixAnimationId = null;
     }
-
+    
+    function handleEscKey(e) {
+        if (e.key === 'Escape') {
+            handleCancel();
+        }
+    }
 
     function handleCancel() {
         clearAllIntervals();
         stopMatrixAnimation();
         registrationForm.style.display = 'none';
         registrationChoice.style.display = 'none';
-        recognitionControls.style.display = 'none';
         updateConfirmation.style.display = 'none';
         successScreen.style.display = 'none';
         successScreen.style.opacity = 0;
-        handGuideBox.style.display = 'none';
         mainMenu.style.display = 'flex';
+        controls.style.display = 'block'; // Show controls again
         imageUploadInput.value = '';
+        hideVideoFeed();
         stopCamera();
         setPlaceholderContent(initialPlaceholderContent);
+        window.removeEventListener('keydown', handleEscKey); // Stop listening for Esc
         loadRegisteredUsers();
+    }
+    
+    function initAssets() {
+        const fingerprintSVG = `
+        <svg fill="%COLOR%" width="100px" height="100px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 0c-8.836 0-16 7.164-16 16s7.164 16 16 16c8.837 0 16-7.164 16-16s-7.163-16-16-16zM16 30.031c-7.742 0-14.031-6.289-14.031-14.031s6.289-14.031 14.031-14.031c7.743 0 14.031 6.289 14.031 14.031s-6.288 14.031-14.031 14.031zM16.813 11.758c-0.453-0.18-0.969-0.281-1.508-0.281-0.781 0-1.523 0.219-2.188 0.617-0.562 0.336-1.023 0.781-1.375 1.305-0.109 0.156-0.203 0.32-0.289 0.492-0.25 0.516-0.398 1.078-0.398 1.664 0 0.531 0.109 1.047 0.328 1.531 0.18 0.406 0.422 0.766 0.727 1.078 0.562 0.562 1.289 0.898 2.078 0.898 0.727 0 1.406-0.273 1.938-0.75 0.312-0.281 0.57-0.625 0.766-1.016 0.25-0.484 0.391-1.016 0.391-1.578 0-0.672-0.18-1.312-0.516-1.891-0.289-0.516-0.711-0.938-1.258-1.25zM17.156 8.523c-0.484-0.172-1.008-0.266-1.555-0.266-0.672 0-1.328 0.141-1.945 0.414-0.719 0.32-1.344 0.797-1.844 1.391-0.938 1.125-1.508 2.57-1.508 4.125 0 0.742 0.195 1.461 0.57 2.109 0.438 0.75 1.078 1.375 1.844 1.812 0.438 0.25 0.906 0.438 1.398 0.57 0.828 0.211 1.688 0.211 2.523 0 0.469-0.125 0.922-0.305 1.344-0.531 0.828-0.438 1.539-1.078 2.078-1.875 0.352-0.523 0.609-1.109 0.758-1.742 0.219-0.828 0.219-1.687 0-2.516-0.141-0.531-0.375-1.031-0.68-1.484-0.57-0.828-1.344-1.5-2.25-1.969-0.469-0.242-0.969-0.43-1.492-0.555zM22.719 19.148c-0.609 0.703-1.344 1.281-2.188 1.68-0.352 0.164-0.727 0.305-1.109 0.414-0.438 0.117-0.883 0.195-1.336 0.25-0.18 0.023-0.367 0.047-0.555 0.062-0.359 0.039-0.719 0.055-1.078 0.055-0.484 0-0.961-0.031-1.43-0.094-0.43-0.055-0.852-0.141-1.266-0.266-0.742-0.219-1.445-0.547-2.078-0.969-0.672-0.445-1.25-1-1.711-1.648-0.227-0.32-0.422-0.656-0.578-1.016-0.328-0.719-0.5-1.5-0.5-2.32 0-1.141 0.391-2.227 1.094-3.141 0.727-0.938 1.742-1.648 2.891-2.078 0.5-0.18 1.023-0.305 1.555-0.375 0.547-0.070 1.094-0.102 1.648-0.102 0.656 0 1.305 0.047 1.945 0.148 0.75 0.117 1.477 0.328 2.164 0.641 1.25 0.555 2.32 1.43 3.125 2.539 0.484 0.656 0.859 1.406 1.078 2.219 0.25 0.938 0.25 1.914 0 2.859-0.141 0.531-0.352 1.039-0.625 1.516-0.281 0.484-0.609 0.93-0.984 1.328z"></path>
+        </svg>
+        `.replace('%COLOR%', getComputedStyle(document.documentElement).getPropertyValue('--matrix-green').trim());
+
+        fingerprintImage.src = 'data:image/svg+xml;base64,' + btoa(fingerprintSVG);
     }
 
     registerBtn.addEventListener('click', () => {
@@ -955,18 +1003,14 @@
             return;
         }
         mainMenu.style.display = 'none';
-        loadModels(() => {
-            registrationChoice.style.display = 'flex';
-            statusMessage.innerText = 'Pilih kaedah pendaftaran.';
-        });
+        registrationChoice.style.display = 'flex';
+        statusMessage.innerText = 'Pilih kaedah pendaftaran.';
     });
     registerCameraBtn.addEventListener('click', startRegistrationGuide);
     registerImageBtn.addEventListener('click', startImageUploadRegistration);
     imageUploadInput.addEventListener('change', previewImage);
     cancelChoiceBtn.addEventListener('click', handleCancel);
     cancelFormBtn.addEventListener('click', handleCancel);
-    backBtn.addEventListener('click', handleCancel);
-    resetBtn.addEventListener('click', handleCancel);
     confirmUpdateBtn.addEventListener('click', updateUserData);
     cancelUpdateBtn.addEventListener('click', handleCancel);
 
@@ -985,17 +1029,19 @@
             await handleVideoRegistration(name, position);
         }
     });
-    recognizeBtn.addEventListener('click', () => {
-        loadModels(startRecognition);
-    });
+    recognizeBtn.addEventListener('click', startRecognition);
 
     function showError(msg) {
         errorMessage.innerText = msg;
         errorMessage.style.display = 'block';
     }
     
-    setPlaceholderContent(initialPlaceholderContent);
-    loadRegisteredUsers();
+    // Initial App Load
+    document.addEventListener('DOMContentLoaded', () => {
+        setPlaceholderContent(initialPlaceholderContent);
+        initAssets();
+        initializeAppFlow();
+    });
 
 </script>
 </body>
