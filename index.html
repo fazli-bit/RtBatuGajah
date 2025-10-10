@@ -1,1 +1,129 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rancangan Tempatan MDBG 2035 (Penggantian)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hero-bg {
+            background-color: #f0f9f4;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1) 70%),
+                url('https://placehold.co/1600x900/a7f3d0/14532d?text=Peta+Pembangunan+Batu+Gajah');
+            background-size: cover;
+            background-position: center left;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <img src="https://placehold.co/120x50/cccccc/333333?text=Logo+MDBG" alt="Logo MDBG" class="h-10">
+                <img src="https://placehold.co/120x50/cccccc/333333?text=Logo+PLANMalaysia" alt="Logo PLANMalaysia" class="h-10 hidden sm:block">
+            </div>
+            <div class="text-right">
+                <h1 class="font-bold text-lg md:text-xl text-emerald-800">Rancangan Tempatan</h1>
+                <p class="text-sm text-gray-500">Majlis Daerah Batu Gajah 2035</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="hero-bg">
+        <div class="container mx-auto px-6 py-20 md:py-32 flex items-center">
+            <div class="w-full md:w-1/2 lg:w-2/3">
+                <h2 class="text-3xl md:text-5xl font-bold text-emerald-900 leading-tight">Membentuk Masa Depan Batu Gajah</h2>
+                <p class="mt-4 text-lg text-gray-700">Batu Gajah ke Arah Perbandaran Berdaya Huni, Mesra Pelabur, Mampan dan Pintar.</p>
+                <p class="mt-2 text-gray-600">Terokai draf rancangan tempatan yang menggariskan hala tuju pembangunan daerah sehingga tahun 2035.</p>
+                <div class="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                    <a href="#laporan" class="w-full sm:w-auto inline-block text-center bg-emerald-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-emerald-800 transition duration-300 transform hover:scale-105">
+                        Lihat Laporan Penuh
+                    </a>
+                    <a href="#dashboard" class="w-full sm:w-auto inline-block text-center bg-white text-emerald-700 font-semibold py-3 px-8 rounded-lg shadow-md border border-emerald-700 hover:bg-emerald-50 transition duration-300 transform hover:scale-105">
+                        Dashboard Kajian
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Pengenalan Section -->
+    <section id="pengenalan" class="py-16 bg-white">
+        <div class="container mx-auto px-6 text-center">
+            <h3 class="text-3xl font-bold text-emerald-800">Apakah Rancangan Tempatan?</h3>
+            <p class="mt-4 max-w-3xl mx-auto text-gray-600">
+                Rancangan Tempatan (RT) adalah dokumen perancangan yang menterjemahkan dasar-dasar peringkat nasional dan negeri ke dalam bentuk pelan guna tanah terperinci dan strategi pembangunan. RT MDBG 2035 (Penggantian) ini menjadi rujukan utama bagi kawalan perancangan dan hala tuju pembangunan di seluruh kawasan pentadbiran Majlis Daerah Batu Gajah.
+            </p>
+        </div>
+    </section>
+
+    <!-- Teras Pembangunan Section -->
+    <section id="teras" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-emerald-800">Teras Pembangunan Utama</h3>
+                <p class="mt-2 text-gray-600">Lima teras strategik sebagai asas pembangunan MDBG 2035.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+                <!-- Teras 1 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="bg-emerald-100 w-16 h-16 rounded-full mx-auto flex items-center justify-center">
+                        <i data-lucide="map-pin" class="text-emerald-700"></i>
+                    </div>
+                    <h4 class="mt-4 font-bold text-lg text-emerald-900">Perancangan Spatial & Persekitaran Mampan</h4>
+                </div>
+                <!-- Teras 2 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="bg-emerald-100 w-16 h-16 rounded-full mx-auto flex items-center justify-center">
+                        <i data-lucide="bar-chart-3" class="text-emerald-700"></i>
+                    </div>
+                    <h4 class="mt-4 font-bold text-lg text-emerald-900">Ekosistem Ekonomi Berdaya Saing</h4>
+                </div>
+                <!-- Teras 3 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="bg-emerald-100 w-16 h-16 rounded-full mx-auto flex items-center justify-center">
+                        <i data-lucide="users" class="text-emerald-700"></i>
+                    </div>
+                    <h4 class="mt-4 font-bold text-lg text-emerald-900">Komuniti Sejahtera</h4>
+                </div>
+                <!-- Teras 4 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="bg-emerald-100 w-16 h-16 rounded-full mx-auto flex items-center justify-center">
+                        <i data-lucide="bus" class="text-emerald-700"></i>
+                    </div>
+                    <h4 class="mt-4 font-bold text-lg text-emerald-900">Infrastruktur & Pengangkutan Efisien</h4>
+                </div>
+                <!-- Teras 5 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="bg-emerald-100 w-16 h-16 rounded-full mx-auto flex items-center justify-center">
+                        <i data-lucide="shield-check" class="text-emerald-700"></i>
+                    </div>
+                    <h4 class="mt-4 font-bold text-lg text-emerald-900">Tadbir Urus Cekap & Berkesan</h4>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-emerald-800 text-white">
+        <div class="container mx-auto px-6 py-8 text-center">
+            <p>&copy; 2025 Majlis Daerah Batu Gajah. Hak Cipta Terpelihara.</p>
+            <p class="text-sm mt-2 text-emerald-200">Sebahagian daripada Draf Rancangan Tempatan MDBG 2035 (Penggantian).</p>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
 
