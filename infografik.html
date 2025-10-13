@@ -3,159 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Papan Pemuka: Wawasan Pembangunan MDBG 2035</title>
+    <title>Papan Pemuka Guna Tanah: Wawasan MDBG 2035</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #F0F4F8; /* Light grey-blue background */
+            background-color: #ffffef; /* New ivory background */
         }
         .chart-container {
             position: relative;
             width: 100%;
-            height: 350px; /* Standard height for dashboard charts */
+            height: 400px;
+        }
+        .pie-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
         }
         @media (max-width: 768px) {
-            .chart-container {
-                height: 300px;
+            .chart-container, .pie-container {
+                height: 350px;
             }
         }
-        .kpi-card {
-            background-color: #ffffff;
-            border-left: 5px solid #0F4C5C;
-            color: #0F4C5C;
-        }
-        .kpi-value {
-            font-size: 2.25rem;
-            font-weight: 900;
-            line-height: 1;
-            color: #5F0F40;
-        }
-        .kpi-label {
-            font-size: 0.9rem;
-            font-weight: 600;
-            opacity: 0.9;
-            color: #6B7280;
-        }
         .card {
-            background-color: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e5e5;
+            box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.04);
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
         }
         .card-title {
-            font-size: 1.1rem;
+            font-size: 1.25rem;
             font-weight: 700;
-            color: #5F0F40;
+            color: #023f33; /* New dark green */
             margin-bottom: 1rem;
         }
-        .issue-card {
-            border-left: 4px solid #E36414;
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #023f33; /* New dark green */
         }
-        .potential-card {
-            border-left: 4px solid #0F4C5C;
+        .stat-label {
+            font-size: 0.9rem;
+            color: #575757;
         }
-        .icon-style {
-            font-size: 1.2rem;
-            margin-right: 0.75rem;
-            width: 24px;
-            text-align: center;
-        }
-        .issue-icon { color: #E36414; }
-        .potential-icon { color: #0F4C5C; }
     </style>
 </head>
-<body class="bg-slate-100">
+<body class="text-gray-800">
 
-    <div class="flex flex-col h-screen">
-        <header class="bg-white shadow-sm w-full z-10">
-            <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-extrabold text-[#5F0F40]">Papan Pemuka Wawasan MDBG 2035</h1>
-                    <p class="text-sm text-[#0F4C5C]">Analisis Komprehensif Rancangan Tempatan</p>
-                </div>
-            </div>
-        </header>
+    <div class="flex flex-col min-h-screen">
 
-        <main class="flex-1 overflow-y-auto p-6">
+
+        <main class="flex-1 p-6">
             <div class="container mx-auto">
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <div class="kpi-card rounded-lg p-4 shadow">
-                        <div class="kpi-label">Jumlah Keluasan Kawasan</div>
-                        <div class="kpi-value mt-1">65,335 <span class="text-lg font-semibold opacity-80">hektar</span></div>
-                    </div>
-                    <div class="kpi-card rounded-lg p-4 shadow">
-                        <div class="kpi-label">Unjuran Populasi 2035</div>
-                        <div class="kpi-value mt-1">156,775 <span class="text-lg font-semibold opacity-80">orang</span></div>
-                    </div>
-                    <div class="kpi-card rounded-lg p-4 shadow">
-                        <div class="kpi-label">Anggaran Kos Pelaksanaan</div>
-                        <div class="kpi-value mt-1">RM5.93 <span class="text-lg font-semibold opacity-80">bilion</span></div>
-                    </div>
-                    <div class="kpi-card rounded-lg p-4 shadow">
-                        <div class="kpi-label">Jumlah Cadangan Pembangunan</div>
-                        <div class="kpi-value mt-1">161</div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
-                    <div class="card xl:col-span-2">
-                        <h3 class="card-title">Aliran Pertumbuhan Populasi (2020-2035)</h3>
-                        <div class="chart-container flex-1">
-                            <canvas id="populationChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="card xl:col-span-2">
-                        <h3 class="card-title">Fokus Teras Pembangunan (Bil. Cadangan)</h3>
-                        <div class="chart-container flex-1">
-                            <canvas id="focusRadarChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                    <div class="card">
-                        <h3 class="card-title">Sumbangan Ekonomi (KDNK)</h3>
-                        <div class="chart-container flex-1">
-                            <canvas id="economyChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="card lg:col-span-2">
-                        <h3 class="card-title">Perbandingan Guna Tanah (2024 vs 2035)</h3>
-                        <div class="flex flex-col md:flex-row gap-4 h-full">
-                            <div class="chart-container flex-1">
-                                <canvas id="landUse2024Chart"></canvas>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <div class="space-y-6">
+                        <div class="card">
+                            <h3 class="card-title">Komposisi Guna Tanah: 2024 vs 2035</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="text-center">
+                                    <div class="pie-container">
+                                        <canvas id="landUse2024Chart"></canvas>
+                                    </div>
+                                    <p class="font-bold mt-2">2024</p>
+                                </div>
+                                <div class="text-center">
+                                     <div class="pie-container">
+                                        <canvas id="landUse2035Chart"></canvas>
+                                    </div>
+                                    <p class="font-bold mt-2">2035 (Cadangan)</p>
+                                </div>
                             </div>
-                            <div class="chart-container flex-1">
-                                <canvas id="landUse2035Chart"></canvas>
+                        </div>
+                        <div class="card">
+                             <h3 class="card-title">Pertambahan Keperluan Tanah Utama (2025-2035)</h3>
+                             <div class="chart-container">
+                                <canvas id="landNeedsChart"></canvas>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="card mb-6">
-                    <h3 class="card-title">Pecahan 161 Cadangan Mengikut Teras & Impak</h3>
-                    <div class="chart-container">
-                        <canvas id="proposalsChart"></canvas>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div class="card">
-                        <h3 class="card-title">Anggaran Kos Pelaksanaan Mengikut Teras (RM Bilion)</h3>
-                        <div class="chart-container">
-                            <canvas id="costChart"></canvas>
+                    <div class="space-y-6">
+                        <div class="card">
+                            <h3 class="card-title">Pecahan Terperinci Guna Tanah Tepu Bina (Hektar)</h3>
+                            <div class="chart-container">
+                                <canvas id="landBreakdownChart"></canvas>
+                            </div>
                         </div>
-                    </div>
-                    <div class="card">
-                        <h3 class="card-title">Pertambahan Keperluan Tanah Utama (Hektar)</h3>
-                        <div class="chart-container">
-                            <canvas id="landNeedsChart"></canvas>
+                        <div class="card">
+                            <h3 class="card-title">Ringkasan Statistik (Hektar)</h3>
+                            <div class="grid grid-cols-2 gap-4 pt-4">
+                                <div class="text-center p-4 bg-gray-50 rounded-lg border">
+                                    <div class="stat-label">Jumlah Kawasan</div>
+                                    <div class="stat-value">65,335.20</div>
+                                </div>
+                                <div class="text-center p-4 bg-gray-50 rounded-lg border">
+                                    <div class="stat-label">Tepu Bina 2024</div>
+                                    <div class="stat-value">12,082.99</div>
+                                </div>
+                                <div class="text-center p-4 bg-gray-50 rounded-lg border">
+                                    <div class="stat-label">Tepu Bina 2035</div>
+                                    <div class="stat-value">16,136.37</div>
+                                </div>
+                                <div class="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+                                    <div class="stat-label text-orange-800">Pertambahan Tepu Bina</div>
+                                    <div class="stat-value text-orange-600">+4,053.38</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -164,29 +123,8 @@
     </div>
     
     <script>
-        const vibrantPalette = ['#9A031E', '#FB8B24', '#E36414', '#0F4C5C', '#5F0F40'];
+        const newPalette = ['#023f33', '#046c5a', '#ffb703', '#fb8500', '#8ecae6'];
         
-        function wrapLabel(label) {
-            if (typeof label !== 'string' || label.length <= 16) {
-                return label;
-            }
-            const words = label.split(' ');
-            const lines = [];
-            let currentLine = '';
-            for (const word of words) {
-                if ((currentLine + ' ' + word).trim().length > 16) {
-                    lines.push(currentLine.trim());
-                    currentLine = word;
-                } else {
-                    currentLine = (currentLine + ' ' + word).trim();
-                }
-            }
-            if (currentLine) {
-                lines.push(currentLine.trim());
-            }
-            return lines;
-        }
-
         const tooltipTitleCallback = {
             plugins: {
                 tooltip: {
@@ -205,144 +143,85 @@
             }
         };
 
-        const populationCtx = document.getElementById('populationChart').getContext('2d');
-        new Chart(populationCtx, {
-            type: 'line',
-            data: {
-                labels: ['2020', '2023', '2035'],
-                datasets: [{
-                    label: 'Jumlah Penduduk',
-                    data: [126024, 128500, 156775],
-                    borderColor: vibrantPalette[0],
-                    backgroundColor: 'rgba(154, 3, 30, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: { ...tooltipTitleCallback, maintainAspectRatio: false }
-        });
-
-        const focusRadarCtx = document.getElementById('focusRadarChart').getContext('2d');
-        new Chart(focusRadarCtx, {
-            type: 'radar',
-            data: {
-                labels: ['Teras 1: Spatial', 'Teras 2: Ekonomi', 'Teras 3: Komuniti', 'Teras 4: Infrastruktur', 'Teras 5: Tadbir Urus'],
-                datasets: [{
-                    label: 'Jumlah Cadangan',
-                    data: [34, 39, 57, 21, 10],
-                    backgroundColor: 'rgba(15, 76, 92, 0.2)',
-                    borderColor: vibrantPalette[3],
-                    pointBackgroundColor: vibrantPalette[3],
-                }]
-            },
-            options: {
-                ...tooltipTitleCallback, 
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        angleLines: { color: 'rgba(0,0,0,0.1)' },
-                        grid: { color: 'rgba(0,0,0,0.1)' },
-                        pointLabels: { font: { size: 10 } },
-                        ticks: { backdropColor: 'transparent' }
-                    }
-                }
-            }
-        });
-
-        const economyCtx = document.getElementById('economyChart').getContext('2d');
-        new Chart(economyCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Perlombongan & Pembuatan', 'Perdagangan & Perkhidmatan', 'Pertanian'],
-                datasets: [{
-                    label: 'Sumbangan KDNK (RM Bilion)',
-                    data: [3.0, 3.4, 0.364],
-                    backgroundColor: [vibrantPalette[4], vibrantPalette[1], vibrantPalette[2]],
-                }]
-            },
-            options: {
-                ...tooltipTitleCallback,
-                maintainAspectRatio: false,
-                plugins: { ...tooltipTitleCallback.plugins, legend: { position: 'bottom' } }
-            }
-        });
-
         const landUse2024Ctx = document.getElementById('landUse2024Chart').getContext('2d');
         new Chart(landUse2024Ctx, {
-            type: 'pie',
+            type: 'doughnut',
             data: {
-                labels: ['Tepu Bina', 'Bukan Tepu Bina'],
-                datasets: [{ data: [18.49, 81.51], backgroundColor: [vibrantPalette[1], vibrantPalette[3]] }]
+                labels: ['Tepu Bina (18.5%)', 'Bukan Tepu Bina (81.5%)'],
+                datasets: [{ data: [18.49, 81.51], backgroundColor: [newPalette[2], newPalette[1]], borderWidth: 0 }]
             },
             options: {
                 ...tooltipTitleCallback,
                 maintainAspectRatio: false,
-                plugins: { ...tooltipTitleCallback.plugins, title: { display: true, text: 'Guna Tanah 2024 (18.49%)' }, legend: { position: 'bottom' } }
+                plugins: { ...tooltipTitleCallback.plugins, legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
             }
         });
 
         const landUse2035Ctx = document.getElementById('landUse2035Chart').getContext('2d');
         new Chart(landUse2035Ctx, {
-            type: 'pie',
+            type: 'doughnut',
             data: {
-                labels: ['Tepu Bina', 'Bukan Tepu Bina'],
-                datasets: [{ data: [24.70, 75.30], backgroundColor: [vibrantPalette[1], vibrantPalette[3]] }]
+                labels: ['Tepu Bina (24.7%)', 'Bukan Tepu Bina (75.3%)'],
+                datasets: [{ data: [24.70, 75.30], backgroundColor: [newPalette[2], newPalette[1]], borderWidth: 0 }]
             },
             options: {
                 ...tooltipTitleCallback,
                 maintainAspectRatio: false,
-                plugins: { ...tooltipTitleCallback.plugins, title: { display: true, text: 'Unjuran Guna Tanah 2035 (24.70%)' }, legend: { position: 'bottom' } }
+                plugins: { ...tooltipTitleCallback.plugins, legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
             }
-        });
-
-        const proposalsCtx = document.getElementById('proposalsChart').getContext('2d');
-        const proposalLabels = ['Teras 1', 'Teras 2', 'Teras 3', 'Teras 4', 'Teras 5'];
-        new Chart(proposalsCtx, {
-            type: 'bar',
-            data: {
-                labels: proposalLabels,
-                datasets: [
-                    { label: 'Impak Tinggi', data: [4, 3, 0, 1, 1], backgroundColor: vibrantPalette[0] },
-                    { label: 'Pemangkin', data: [3, 7, 5, 8, 3], backgroundColor: vibrantPalette[1] },
-                    { label: 'Sokongan', data: [18, 20, 36, 7, 3], backgroundColor: vibrantPalette[2] },
-                    { label: 'Quick Win', data: [9, 9, 16, 5, 3], backgroundColor: vibrantPalette[3] }
-                ]
-            },
-            options: {
-                ...tooltipTitleCallback,
-                maintainAspectRatio: false,
-                scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
-                plugins: { ...tooltipTitleCallback.plugins, legend: { position: 'top' } }
-            }
-        });
-
-        const costCtx = document.getElementById('costChart').getContext('2d');
-        const costLabels = ['Teras 1', 'Teras 2', 'Teras 3', 'Teras 4', 'Teras 5'].map(wrapLabel);
-        new Chart(costCtx, {
-            type: 'bar',
-            data: {
-                labels: costLabels,
-                datasets: [{
-                    label: 'Anggaran Kos (RM Bilion)',
-                    data: [0.24, 0.57, 1.59, 3.53, 0.007],
-                    backgroundColor: vibrantPalette[4],
-                }]
-            },
-            options: { ...tooltipTitleCallback, maintainAspectRatio: false, plugins: { ...tooltipTitleCallback.plugins, legend: { display: false } } }
         });
 
         const landNeedsCtx = document.getElementById('landNeedsChart').getContext('2d');
         new Chart(landNeedsCtx, {
             type: 'bar',
             data: {
-                labels: ['Perumahan', 'Komersial', 'Tanah Lapang', 'Institusi'],
+                labels: ['Perumahan', 'Tanah Lapang', 'Komersial', 'Institusi'],
                 datasets: [{
                     label: 'Pertambahan Diperlukan (Hektar)',
-                    data: [1489.22, 112.41, 224.11, 25.27],
-                    backgroundColor: vibrantPalette[2],
+                    data: [1489.22, 224.11, 112.41, 25.27],
+                    backgroundColor: newPalette[3],
+                    borderRadius: 4
                 }]
             },
             options: { ...tooltipTitleCallback, maintainAspectRatio: false, indexAxis: 'y', plugins: { ...tooltipTitleCallback.plugins, legend: { display: false } } }
+        });
+
+        const landBreakdownCtx = document.getElementById('landBreakdownChart').getContext('2d');
+        new Chart(landBreakdownCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Perumahan', 'Industri', 'Pengangkutan', 'Infrastruktur & Utiliti', 'Komersial', 'Institusi', 'Tanah Lapang'],
+                datasets: [
+                    {
+                        label: 'Guna Tanah 2024',
+                        data: [1965.87, 1762.03, 1535.03, 757.65, 519.05, 435.25, 115.24],
+                        backgroundColor: newPalette[1]
+                    },
+                    {
+                        label: 'Cadangan 2035',
+                        data: [6164.99, 2997.30, 3032.61, 786.95, 774.20, 533.33, 318.69],
+                        backgroundColor: newPalette[2]
+                    }
+                ]
+            },
+            options: {
+                ...tooltipTitleCallback,
+                maintainAspectRatio: false,
+                plugins: { ...tooltipTitleCallback.plugins, legend: { position: 'top' } },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f0f0f0'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
         });
     </script>
 </body>
