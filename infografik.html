@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ms" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infografik SPA: Visi Pembangunan MDBG 2035</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f8ff; 
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 380px;
+            }
+        }
+        .kpi-number {
+            font-weight: 900;
+            color: #00509d;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link.active {
+            background-color: #00509d;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .flow-diagram-item {
+            background-color: #ffffff;
+            border: 2px solid #90e0ef;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="text-center py-12 px-4 bg-white shadow-lg">
+        <h1 class="text-4xl md:text-6xl font-black text-[#00509d] mb-2">VISI PEMBANGUNAN MDBG 2035</h1>
+        <p class="text-xl md:text-2xl font-semibold text-[#0096c7]">Membentuk Masa Depan Batu Gajah yang Dinamik, Makmur dan Lestari</p>
+        <p class="mt-4 max-w-4xl mx-auto text-gray-600">
+            Terokai pelan strategik yang akan memacu pertumbuhan ekonomi, memperkasa komuniti, dan memelihara warisan unik Daerah Batu Gajah. Pelan ini menggariskan lima Blok Perancangan (BP) yang direka khusus untuk merealisasikan potensi penuh setiap kawasan.
+        </p>
+    </header>
+
+    <nav id="navbar" class="sticky top-0 z-50 bg-[#f0f8ff]/80 backdrop-blur-md shadow-md py-3 px-2">
+        <div class="container mx-auto max-w-7xl">
+            <div class="flex flex-wrap justify-center gap-2">
+                <a href="#bp1" class="nav-link text-sm font-semibold py-2 px-3 rounded-full bg-white shadow-sm text-[#00509d] hover:bg-[#0096c7] hover:text-white">BP 1: Sg. Terap</a>
+                <a href="#bp2" class="nav-link text-sm font-semibold py-2 px-3 rounded-full bg-white shadow-sm text-[#00509d] hover:bg-[#0096c7] hover:text-white">BP 2: Batu Gajah</a>
+                <a href="#bp3" class="nav-link text-sm font-semibold py-2 px-3 rounded-full bg-white shadow-sm text-[#00509d] hover:bg-[#0096c7] hover:text-white">BP 3: Pusing</a>
+                <a href="#bp4" class="nav-link text-sm font-semibold py-2 px-3 rounded-full bg-white shadow-sm text-[#00509d] hover:bg-[#0096c7] hover:text-white">BP 4: Siputeh</a>
+                <a href="#bp5" class="nav-link text-sm font-semibold py-2 px-3 rounded-full bg-white shadow-sm text-[#00509d] hover:bg-[#0096c7] hover:text-white">BP 5: Bemban</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-8 max-w-7xl space-y-20">
+
+        <section id="bp1" class="pt-16 -mt-16">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-[#00509d]">BP 1: SUNGAI TERAP</h2>
+                <p class="text-lg text-gray-600 mt-2">Pusat Perindustrian Baharu dan Hab Logistik</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-center">
+                    <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Projek Peneraju: Silver Valley Technology Park (SVTP) Fasa 2</h3>
+                    <p class="text-center text-gray-600 mb-6">SVTP Fasa 2 direka sebagai pemangkin ekonomi utama, menarik pelaburan berteknologi tinggi dan mewujudkan rantaian bekalan yang efisien, disokong oleh infrastruktur logistik yang dinaik taraf.</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#128187;</span><div><span class="font-bold">Industri Berteknologi Tinggi:</span> Menjadi hab untuk automasi dan pembuatan pintar.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#128666;</span><div><span class="font-bold">Logistik Bersepadu:</span> Menaik taraf Jalan Siputeh-Simpang Pulai dan sambungan ke Lebuhraya Ipoh-Lumut.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#127968;</span><div><span class="font-bold">Komuniti Lestari:</span> Pembangunan perumahan bercampur dengan kemudahan rekreasi dan zon penampan hijau.</div></li>
+                    </ul>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Pecahan Cadangan Pembangunan</h3>
+                    <p class="text-center text-gray-600 mb-4">Visualisasi ini menunjukkan agihan fokus pembangunan di Sungai Terap, dengan penekanan utama pada sektor perindustrian yang disokong kuat oleh infrastruktur dan pembangunan komuniti.</p>
+                    <div class="chart-container"><canvas id="bp1Chart"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bp2" class="pt-16 -mt-16">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-[#00509d]">BP 2: BATU GAJAH</h2>
+                <p class="text-lg text-gray-600 mt-2">Pusat Pentadbiran, Warisan dan Pelancongan</p>
+            </div>
+             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Peningkatan Kemudahan Awam & Pelancongan</h3>
+                     <p class="text-center text-gray-600 mb-4">Graf ini membandingkan penekanan antara kemudahan sedia ada dengan cadangan baharu yang dirancang untuk memperkasa Batu Gajah sebagai destinasi tarikan utama dan pusat komuniti yang selesa.</p>
+                    <div class="chart-container"><canvas id="bp2Chart"></canvas></div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-center">
+                    <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Memperkasa Identiti Bandar Warisan</h3>
+                    <p class="text-center text-gray-600 mb-6">Fokus utama adalah untuk memulihara dan mencergaskan semula aset warisan Batu Gajah, sambil membangunkan kemudahan moden yang menyokong pertumbuhan ekonomi dan kualiti hidup penduduk.</p>
+                     <ul class="space-y-4">
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#127983;</span><div><span class="font-bold">Pemuliharaan Warisan:</span> Fokus kepada bangunan di Pekan Lama, Jalan Tokong, dan Jalan Besar.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#128722;</span><div><span class="font-bold">Komersial Moden:</span> Pembangunan 'strip mall' & 'lifestyle retail' di Stesen KTMB.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#127973;</span><div><span class="font-bold">Kesihatan & Komuniti:</span> Pembinaan Hospital Batu Gajah baharu dan menaik taraf Taman Tasik Silveritage.</div></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="bp3" class="pt-16 -mt-16">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-[#00509d]">BP 3: PUSING</h2>
+                <p class="text-lg text-gray-600 mt-2">Pusat Komersial dan Industri Kecil & Sederhana (IKS)</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Ekosistem Pembangunan Pusing</h3>
+                <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">Pelan untuk Pusing direka sebagai satu ekosistem bersepadu di mana pertumbuhan komersial, IKS, dan perumahan mampu milik saling menyokong untuk mewujudkan sebuah pekan yang mampan dan berdaya saing.</p>
+                <div class="grid grid-cols-1 md:grid-cols-5 items-center gap-4 text-center font-semibold">
+                    <div class="flow-diagram-item p-4 h-full rounded-lg shadow-sm">Kawasan Perniagaan Baharu</div>
+                    <div class="text-4xl text-[#0096c7] transform rotate-90 md:rotate-0">&rarr;</div>
+                    <div class="flow-diagram-item p-4 h-full rounded-lg shadow-sm">Tapak IKS & Pembangunan Usahawan</div>
+                    <div class="text-4xl text-[#0096c7] transform rotate-90 md:rotate-0">&rarr;</div>
+                    <div class="flow-diagram-item p-4 h-full rounded-lg shadow-sm">Perumahan Mampu Milik & Kemudahan Awam Dinaik Taraf</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bp4" class="pt-16 -mt-16">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-[#00509d]">BP 4: SIPUTEH</h2>
+                <p class="text-lg text-gray-600 mt-2">Pusat Pertanian Moden, Eko-pelancongan dan Pendidikan</p>
+            </div>
+             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                     <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Fokus Pembangunan Bersepadu</h3>
+                     <p class="text-center text-gray-600 mb-4">Carta radar ini menunjukkan strategi pembangunan yang seimbang di Siputeh, menggabungkan kekuatan dalam pertanian, pelancongan, dan pendidikan untuk mewujudkan sinergi yang unik dan mampan.</p>
+                    <div class="chart-container"><canvas id="bp4Chart"></canvas></div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-center">
+                    <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Sinergi Tiga Tonggak Utama</h3>
+                    <p class="text-center text-gray-600 mb-6">Pembangunan Siputeh berpaksikan kepada gabungan tiga sektor utama untuk memacu inovasi dan pertumbuhan lestari.</p>
+                     <ul class="space-y-4">
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#127806;</span><div><span class="font-bold">Pertanian Moden:</span> Memperkasa aktiviti pertanian dan akuakultur serta mewujudkan pusat pengumpulan hasil.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#127794;</span><div><span class="font-bold">Eko-pelancongan:</span> Membangunkan produk agro-tourism di sekitar Ladang Kinta Kellas.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#127891;</span><div><span class="font-bold">Pendidikan & Inovasi:</span> Menyokong R&D teknologi pertanian dengan kerjasama UTP dan menubuhkan pusat latihan kemahiran.</div></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="bp5" class="pt-16 -mt-16">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-[#00509d]">BP 5: BEMBAN</h2>
+                <p class="text-lg text-gray-600 mt-2">Perbandaran Baharu Berteknologi Tinggi dan Hab Sukan</p>
+            </div>
+             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-center">
+                    <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Projek Mega: Automotive Hi-Tech Valley (AHTV)</h3>
+                    <p class="text-center text-gray-600 mb-6">AHTV adalah projek berimpak tinggi yang akan meletakkan Bemban di peta global sebagai hab inovasi automotif, disokong oleh pembangunan Bandar Belia yang dinamik dan infrastruktur bertaraf dunia.</p>
+                     <ul class="space-y-4">
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#128663;</span><div><span class="font-bold">Hab Inovasi Automotif:</span> Pusat R&D untuk teknologi automotif, terutamanya Kenderaan Elektrik (EV).</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#127950;</span><div><span class="font-bold">Bandar Belia & Sukan:</span> Kemudahan sukan ekstrem, litar perlumbaan antarabangsa, dan pusat latihan berprestasi tinggi.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 text-[#48cae4]">&#128246;</span><div><span class="font-bold">Bandar Pintar:</span> Mengintegrasikan elemen 'smart city' dalam pembangunan infrastruktur.</div></li>
+                    </ul>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-bold text-center text-[#00509d] mb-4">Peruntukan Pembangunan di AHTV & Bandar Belia</h3>
+                    <p class="text-center text-gray-600 mb-4">Carta ini menunjukkan pembahagian fokus pelaburan dan pembangunan dalam projek mega AHTV, menonjolkan komitmen yang seimbang antara industri, sukan, inovasi, dan komuniti.</p>
+                    <div class="chart-container"><canvas id="bp5Chart"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center bg-white mt-16 py-12 px-4 shadow-inner">
+         <h2 class="text-2xl font-bold text-[#00509d]">Bersama Membina Masa Depan Batu Gajah</h2>
+         <p class="text-gray-600 mt-2 max-w-2xl mx-auto">Pelan ini adalah satu rangka kerja untuk pertumbuhan. Kejayaannya bergantung kepada kerjasama semua pihak. Suara dan penyertaan anda amat penting dalam merealisasikan visi 2035.</p>
+    </footer>
+
+    <script>
+        const tooltipTitleCallback = {
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            const item = tooltipItems[0];
+                            let label = item.chart.data.labels[item.dataIndex];
+                            if (Array.isArray(label)) {
+                                return label.join(' ');
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        };
+
+        const processLabels = (labels) => {
+            return labels.map(label => {
+                if (label.length > 16) {
+                    const words = label.split(' ');
+                    const lines = [];
+                    let currentLine = '';
+                    words.forEach(word => {
+                        if ((currentLine + word).length > 16) {
+                            lines.push(currentLine.trim());
+                            currentLine = word + ' ';
+                        } else {
+                            currentLine += word + ' ';
+                        }
+                    });
+                    lines.push(currentLine.trim());
+                    return lines;
+                }
+                return label;
+            });
+        };
+
+        const vibrantBlues = ['#00509d', '#0096c7', '#48cae4', '#90e0ef'];
+
+        new Chart(document.getElementById('bp1Chart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Perindustrian & Logistik', 'Perumahan & Komuniti', 'Infrastruktur & Rangkaian Jalan', 'Zon Hijau & Rekreasi'],
+                datasets: [{ data: [50, 25, 15, 10], backgroundColor: vibrantBlues, borderColor: '#f0f8ff', borderWidth: 4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, ...tooltipTitleCallback }
+        });
+
+        new Chart(document.getElementById('bp2Chart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: processLabels(['Pemuliharaan Warisan', 'Pembangunan Komersial', 'Taman & Rekreasi', 'Kemudahan Kesihatan', 'Rangkaian Pejalan Kaki']),
+                datasets: [
+                    { label: 'Penekanan Sedia Ada', data: [5, 4, 6, 3, 2], backgroundColor: '#90e0ef' },
+                    { label: 'Cadangan Baharu', data: [9, 8, 8, 9, 8], backgroundColor: '#0096c7' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 10 } }, ...tooltipTitleCallback }
+        });
+        
+        new Chart(document.getElementById('bp4Chart').getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: processLabels(['Pertanian Moden', 'Eko-pelancongan', 'Pendidikan & Latihan', 'Penyelidikan (R&D)', 'Infrastruktur Sokongan']),
+                datasets: [{
+                    label: 'Tahap Keutamaan Strategik',
+                    data: [9, 8, 8, 7, 6],
+                    backgroundColor: 'rgba(0, 150, 199, 0.2)',
+                    borderColor: '#0096c7',
+                    pointBackgroundColor: '#0096c7',
+                    borderWidth: 2
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 10 } }, ...tooltipTitleCallback }
+        });
+
+        new Chart(document.getElementById('bp5Chart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: processLabels(['R&D Teknologi Automotif (EV)', 'Litar Sukan & Kemudahan Sukan Prestasi Tinggi', 'Bandar Belia & Perumahan Terancang', 'Infrastruktur Bandar Pintar']),
+                datasets: [{ data: [40, 25, 20, 15], backgroundColor: vibrantBlues, borderColor: '#f0f8ff', borderWidth: 4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, ...tooltipTitleCallback }
+        });
+        
+        window.addEventListener('scroll', () => {
+            let current = '';
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const navbarHeight = document.getElementById('navbar').offsetHeight;
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - navbarHeight - 20;
+                if (pageYOffset >= sectionTop) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
