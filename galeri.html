@@ -25,7 +25,6 @@
         .modal-content img { max-width: 100%; max-height: 70vh; object-fit: contain; margin-bottom: 15px; }
         #close-modal { position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
         
-        /* NEW: Landscape warning for mobile */
         #landscape-warning { display: none; }
         @media screen and (max-width: 1024px) and (orientation: portrait) {
             #landscape-warning {
@@ -44,7 +43,6 @@
     </style>
 </head>
 <body>
-    <!-- NEW: Container for the main app -->
     <div id="app-container">
         <div id="blocker">
             <div id="instructions">
@@ -59,7 +57,6 @@
             </div>
         </div>
 
-        <!-- NEW: Fullscreen Button -->
         <button id="fullscreen-btn" class="fixed top-5 right-5 z-20 bg-gray-500 bg-opacity-50 text-white p-3 rounded-full active:bg-opacity-75 select-none" title="Skrin Penuh">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
         </button>
@@ -85,7 +82,6 @@
         </div>
     </div>
     
-    <!-- NEW: Landscape Warning Screen -->
     <div id="landscape-warning">
          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white mb-4"><path d="M21.73 12a2.24 2.24 0 0 0-1-1.73l-7-4a2.23 2.23 0 0 0-2.54 0l-7 4A2.24 2.24 0 0 0 3 12v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="m2 10 10 6 10-6"/><path d="m22 12-10 6-10-6"/></svg>
         <h2 class="text-2xl font-bold">Mod Landskap Diperlukan</h2>
@@ -110,21 +106,32 @@
         let targetRotationY;
         let isRotating = false;
         
+        // NEW: Senarai panel diubahsuai
         const artworks = [
-            { img: 'https://placehold.co/400x300/e74c3c/ffffff?text=Depan+1', title: 'Horizon Merah', artist: 'Artis A', position: new THREE.Vector3(-10, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
-            { img: 'https://placehold.co/400x300/9b59b6/ffffff?text=Depan+2', title: 'Lembayung Senja', artist: 'Artis B', position: new THREE.Vector3(0, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
-            { img: 'https://placehold.co/400x300/f1c40f/ffffff?text=Depan+3', title: 'Gurun Emas', artist: 'Artis C', position: new THREE.Vector3(10, 5, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
-            { img: 'https://placehold.co/300x400/2ecc71/ffffff?text=Kanan+1', title: 'Rimba Tropika', artist: 'Artis D', position: new THREE.Vector3(14.9, 5, 25), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/34495e/ffffff?text=Kanan+2', title: 'Batu Granit', artist: 'Artis E', position: new THREE.Vector3(14.9, 5, 12), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/16a085/ffffff?text=Kanan+3', title: 'Permata Jade', artist: 'Artis F', position: new THREE.Vector3(14.9, 5, -1), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/f39c12/ffffff?text=Kanan+4', title: 'Mentari Terik', artist: 'Artis G', position: new THREE.Vector3(14.9, 5, -14), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/2980b9/ffffff?text=Kanan+5', title: 'Air Terjun', artist: 'Artis H', position: new THREE.Vector3(14.9, 5, -27), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/3498db/ffffff?text=Kiri+1', title: 'Samudera Pasifik', artist: 'Artis I', position: new THREE.Vector3(-14.9, 5, 25), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/1abc9c/ffffff?text=Kiri+2', title: 'Lagun Firus', artist: 'Artis J', position: new THREE.Vector3(-14.9, 5, 12), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/8e44ad/ffffff?text=Kiri+3', title: 'Medan Asteroid', artist: 'Artis K', position: new THREE.Vector3(-14.9, 5, -1), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/c0392b/ffffff?text=Kiri+4', title: 'Tanah Terakota', artist: 'Artis L', position: new THREE.Vector3(-14.9, 5, -14), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-            { img: 'https://placehold.co/300x400/2c3e50/ffffff?text=Kiri+5', title: 'Malam Gelap', artist: 'Artis M', position: new THREE.Vector3(-14.9, 5, -27), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            // Panel Utama di Dinding Depan
+            { isLarge: true, title: 'Panel Utama', artist: 'Rancangan Tempatan', position: new THREE.Vector3(0, 8, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
+
+            // Dinding Kanan - 5 panel
+            { title: 'Panel Sisi', artist: 'Info 1', position: new THREE.Vector3(14.9, 5, 25), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel Sisi', artist: 'Info 2', position: new THREE.Vector3(14.9, 5, 12), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel Sisi', artist: 'Info 3', position: new THREE.Vector3(14.9, 5, -1), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel Sisi', artist: 'Info 4', position: new THREE.Vector3(14.9, 5, -14), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel Sisi', artist: 'Info 5', position: new THREE.Vector3(14.9, 5, -27), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+			{ title: 'Panel Sisi', artist: 'Info 12', position: new THREE.Vector3(14.9, 5, -40), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            
+            // Dinding Kiri - 5 panel
+            { title: 'Panel Sisi', artist: 'Info 6', position: new THREE.Vector3(-14.9, 5, 25), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel Sisi', artist: 'Info 7', position: new THREE.Vector3(-14.9, 5, 12), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel Sisi', artist: 'Info 8', position: new THREE.Vector3(-14.9, 5, -1), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel Sisi', artist: 'Info 9', position: new THREE.Vector3(-14.9, 5, -14), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel Sisi', artist: 'Info 10', position: new THREE.Vector3(-14.9, 5, -27), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+			{ title: 'Panel Sisi', artist: 'Info 11', position: new THREE.Vector3(-14.9, 5, -40), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
         ];
+        
+        // NEW: Sumber imej dijana secara automatik
+        artworks.forEach((art, index) => {
+            art.img = `img/panel${index + 1}.jpg`;
+        });
 
         const clock = new THREE.Clock();
         init();
@@ -183,7 +190,6 @@
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            // Appended to the app-container, not body
             document.getElementById('app-container').appendChild(renderer.domElement);
             
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
@@ -277,7 +283,6 @@
                 gameActive = true;
             }, { once: true });
             
-            // NEW: Fullscreen button listener
             const fullscreenBtn = document.getElementById('fullscreen-btn');
             if (fullscreenBtn) {
                 fullscreenBtn.addEventListener('click', toggleFullScreen);
@@ -336,7 +341,6 @@
             const left = document.getElementById('mobile-left');
             const right = document.getElementById('mobile-right');
             
-            // FIX: Safety check to prevent crash if elements are not found
             if (controls && up && down && left && right) {
                 controls.classList.remove('hidden');
                 controls.classList.add('flex');
@@ -389,8 +393,11 @@
         function loadArtworks() {
             const loader = new THREE.TextureLoader();
             artworks.forEach(art => {
-                const isVertical = art.img.includes('300x400');
-                const artGeo = new THREE.PlaneGeometry(isVertical ? 6 : 8, isVertical ? 8 : 6);
+                // NEW: Saiz panel ditentukan secara dinamik
+                const artGeo = art.isLarge
+                    ? new THREE.PlaneGeometry(28, 14) // Saiz untuk panel besar
+                    : new THREE.PlaneGeometry(6, 8);   // Saiz standard untuk panel sisi
+
                 const artMat = new THREE.MeshLambertMaterial({ map: loader.load(art.img) });
                 const artworkMesh = new THREE.Mesh(artGeo, artMat);
                 
@@ -438,7 +445,6 @@
             }
         }
 
-        // NEW: Fullscreen function
         function toggleFullScreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {
