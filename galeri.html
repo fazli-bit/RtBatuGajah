@@ -100,37 +100,37 @@
 
         let currentPositionState = 1;
         const position1 = new THREE.Vector3(0, 5, 20);
-        const position2 = new THREE.Vector3(0, 5, -15);
+        // DIUBAH: Kedudukan hadapan kamera diundurkan sedikit
+        const position2 = new THREE.Vector3(0, 5, -25);
         let targetPosition = new THREE.Vector3();
 
         let targetRotationY;
         let isRotating = false;
         
-        // NEW: Senarai panel diubahsuai
         const artworks = [
             // Panel Utama di Dinding Depan
             { isLarge: true, title: 'Panel Utama', artist: 'Rancangan Tempatan', position: new THREE.Vector3(0, 8, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
 
-            // Dinding Kanan - 5 panel
-            { title: 'Panel Sisi', artist: 'Info 1', position: new THREE.Vector3(14.9, 5, 25), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { title: 'Panel Sisi', artist: 'Info 2', position: new THREE.Vector3(14.9, 5, 12), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { title: 'Panel Sisi', artist: 'Info 3', position: new THREE.Vector3(14.9, 5, -1), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { title: 'Panel Sisi', artist: 'Info 4', position: new THREE.Vector3(14.9, 5, -14), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-            { title: 'Panel Sisi', artist: 'Info 5', position: new THREE.Vector3(14.9, 5, -27), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
-			{ title: 'Panel Sisi', artist: 'Info 12', position: new THREE.Vector3(14.9, 5, -40), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            // Dinding Kanan - 6 panel (Kedudukan Y dinaikkan)
+            { title: 'Panel 1', artist: 'Info 1', position: new THREE.Vector3(14.9, 8, 18), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 2', artist: 'Info 2', position: new THREE.Vector3(14.9, 8, 7.2), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 3', artist: 'Info 3', position: new THREE.Vector3(14.9, 8, -3.6), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 4', artist: 'Info 4', position: new THREE.Vector3(14.9, 8, -14.4), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 5', artist: 'Info 5', position: new THREE.Vector3(14.9, 8, -25.2), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 6', artist: 'Info 12', position: new THREE.Vector3(14.9, 8, -36), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
             
-            // Dinding Kiri - 5 panel
-            { title: 'Panel Sisi', artist: 'Info 6', position: new THREE.Vector3(-14.9, 5, 25), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-            { title: 'Panel Sisi', artist: 'Info 7', position: new THREE.Vector3(-14.9, 5, 12), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-            { title: 'Panel Sisi', artist: 'Info 8', position: new THREE.Vector3(-14.9, 5, -1), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-            { title: 'Panel Sisi', artist: 'Info 9', position: new THREE.Vector3(-14.9, 5, -14), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-            { title: 'Panel Sisi', artist: 'Info 10', position: new THREE.Vector3(-14.9, 5, -27), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
-			{ title: 'Panel Sisi', artist: 'Info 11', position: new THREE.Vector3(-14.9, 5, -40), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            // Dinding Kiri - 6 panel (Kedudukan Y dinaikkan)
+            { title: 'Panel 7', artist: 'Info 6', position: new THREE.Vector3(-14.9, 8, 18), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 8', artist: 'Info 7', position: new THREE.Vector3(-14.9, 8, 7.2), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 9', artist: 'Info 8', position: new THREE.Vector3(-14.9, 8, -3.6), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 10', artist: 'Info 9', position: new THREE.Vector3(-14.9, 8, -14.4), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 11', artist: 'Info 10', position: new THREE.Vector3(-14.9, 8, -25.2), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 12', artist: 'Info 11', position: new THREE.Vector3(-14.9, 8, -36), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
         ];
         
-        // NEW: Sumber imej dijana secara automatik
+        // Sumber imej dijana secara automatik
         artworks.forEach((art, index) => {
-            art.img = `img/panel${index + 1}.jpg`;
+            art.img = `https://placehold.co/400x400/000000/FFFFFF?text=Panel+${index + 1}`;
         });
 
         const clock = new THREE.Clock();
@@ -393,12 +393,21 @@
         function loadArtworks() {
             const loader = new THREE.TextureLoader();
             artworks.forEach(art => {
-                // NEW: Saiz panel ditentukan secara dinamik
+                // Saiz panel ditentukan secara dinamik
                 const artGeo = art.isLarge
-                    ? new THREE.PlaneGeometry(28, 14) // Saiz untuk panel besar
-                    : new THREE.PlaneGeometry(6, 8);   // Saiz standard untuk panel sisi
+                    ? new THREE.PlaneGeometry(28, 14)       // Saiz untuk panel besar
+                    : new THREE.PlaneGeometry(5, 12);       // Nisbah 5:12
 
-                const artMat = new THREE.MeshLambertMaterial({ map: loader.load(art.img) });
+                const artMat = new THREE.MeshLambertMaterial({ 
+                    map: loader.load(art.img, (texture) => {
+                        // Pastikan tekstur panel sisi tidak herot
+                        if (!art.isLarge) {
+                            texture.repeat.set(1, 1);
+                        }
+                    }),
+                    color: 0xffffff
+                });
+
                 const artworkMesh = new THREE.Mesh(artGeo, artMat);
                 
                 artworkMesh.position.copy(art.position);
