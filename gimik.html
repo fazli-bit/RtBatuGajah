@@ -270,7 +270,7 @@
             </div>
         </div>
         <div id="status-message"></div>
-        <div id="version-info">versi 1.4.11</div>
+        <div id="version-info">versi 1.4.12</div>
     </div>
     <div id="success-screen">
         <canvas id="matrix-canvas"></canvas>
@@ -764,6 +764,10 @@
                                             isReadyForHandScan = true;
                                         });
                                     }
+                                }
+                                // --- PERUBAHAN DI SINI: Paparkan nama walaupun belum lock ---
+                                if(lockedOnUser) {
+                                    drawMatrixInfo(context, flippedBox, lockedOnUser.name, lockedOnUser.position);
                                 }
                                 break; 
                             }
