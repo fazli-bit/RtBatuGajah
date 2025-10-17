@@ -270,7 +270,7 @@
             </div>
         </div>
         <div id="status-message"></div>
-        <div id="version-info">versi 1.5.0</div>
+        <div id="version-info">versi 1.4.11</div>
     </div>
     <div id="success-screen">
         <canvas id="matrix-canvas"></canvas>
@@ -343,14 +343,15 @@
     let registeredUsers = [];
     let firstMatchTime = null;
     let handDetector = null;
-    let handVerificationTimer = null;
-    let secondAuthReadyTime = null;
+    let handScanStartTime = null;
+    let finalVerificationTimer = null;
     let matrixAnimationId = null;
     let areModelsLoaded = false;
     let userToUpdate = null;
     let registrationScanInterval = null;
-    let scanFrame = 0; // Untuk animasi gimik
-    let fingerprintImage = new Image();
+    let roboticVoice = null;
+    let lockedOnUser = null;
+    let isReadyForHandScan = false;
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
@@ -379,6 +380,7 @@
     async function initializeAppFlow() {
         registerBtn.disabled = true;
         recognizeBtn.disabled = true;
+        initializeTTS();
         await loadAllModels();
         await loadRegisteredUsers();
     }
@@ -497,104 +499,148 @@
         context.fillStyle = '#39FF14';
         context.shadowColor = '#39FF14';
         context.shadowBlur = 10;
+        context.textAlign = 'center';
         context.fillText(text, x, y);
-        context.shadowBlur = 0;
     }
     
-    function drawMatrixInfo(context, box, name, position, score) {
+    function drawMatrixInfo(context, box, name, position) {
         const textLines = [
-            `• NAMA: ${name.toUpperCase()}`,
-            `• JAWATAN: ${position.toUpperCase()}`,
-            `• KEYAKINAN: ${score.toFixed(2)}`
+            name.toUpperCase(),
+            position.toUpperCase(),
         ];
         context.font = '20px VT323, monospace';
         const textWidth = Math.max(...textLines.map(line => context.measureText(line).width));
-        const textHeight = 80;
-        let startX = box.x + 5;
-        let startY;
+        const textHeight = 55;
+        let startX = box.x;
+        let startY = box.y + box.height + 5;
 
-        if (box.y + box.height + textHeight + 10 > overlayCanvas.height) {
-            startY = box.y - textHeight + 15;
-        } else {
-            startY = box.y + box.height + 25;
+        if (startY + textHeight > overlayCanvas.height) {
+            startY = box.y - textHeight - 5;
         }
+        if (startX + textWidth + 20 > overlayCanvas.width) {
+            startX = overlayCanvas.width - textWidth - 20;
+        }
+        if (startX < 0) {
+            startX = 0;
+        }
+
         context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        context.fillRect(startX, startY - 20, textWidth + 20, textHeight);
-        drawMatrixText(context, textLines[0], startX + 10, startY, 20);
-        drawMatrixText(context, textLines[1], startX + 10, startY + 25, 20);
-        drawMatrixText(context, textLines[2], startX + 10, startY + 50, 20);
+        context.fillRect(startX, startY, textWidth + 20, textHeight);
+        context.textAlign = 'left';
+        drawMatrixText(context, textLines[0], startX + 10, startY + 20, 20);
+        drawMatrixText(context, textLines[1], startX + 10, startY + 45, 20);
     }
 
-    // --- FUNGSI GIMIK BARU ---
-    function drawIrisScan(context, landmarks) {
-        const leftEye = landmarks.getLeftEye();
-        const rightEye = landmarks.getRightEye();
+    function drawHandBox(context, hands, progress) {
+        if (hands.length === 0) return;
 
-        [leftEye, rightEye].forEach(eye => {
-            const eyeCenter = eye.reduce((acc, point) => ({
-                x: acc.x + point.x / eye.length,
-                y: acc.y + point.y / eye.length
-            }), { x: 0, y: 0 });
+        const keypoints = hands[0].keypoints;
+        const xCoords = keypoints.map(p => p.x);
+        const yCoords = keypoints.map(p => p.y);
+        
+        const xMin = Math.min(...xCoords);
+        const yMin = Math.min(...yCoords);
+        const xMax = Math.max(...xCoords);
+        const yMax = Math.max(...yCoords);
+        
+        const boxWidth = xMax - xMin;
+        const boxHeight = yMax - yMin;
 
-            const flippedEyeCenterX = overlayCanvas.width - eyeCenter.x;
+        const padding = 20;
+        const paddedXMin = xMin - padding;
+        const paddedYMin = yMin - padding;
+        const paddedWidth = boxWidth + padding * 2;
+        const paddedHeight = boxHeight + padding * 2;
 
-            context.strokeStyle = 'rgba(57, 255, 20, 0.7)';
-            context.lineWidth = 1.5;
+        const scaleX = overlayCanvas.width / video.videoWidth;
+        const scaleY = overlayCanvas.height / video.videoHeight;
 
-            // Bulatan beranimasi
-            const radius = 10 + 5 * Math.sin(scanFrame * 0.2);
-            context.beginPath();
-            context.arc(flippedEyeCenterX, eyeCenter.y, Math.abs(radius), 0, 2 * Math.PI);
-            context.stroke();
+        const x = paddedXMin * scaleX;
+        const y = paddedYMin * scaleY;
+        const width = paddedWidth * scaleX;
+        const height = paddedHeight * scaleY;
+        
+        const flippedX = overlayCanvas.width - x - width;
 
-            // Garisan berputar
-            const angle = scanFrame * 0.1;
-            const lineLength = 25;
-            context.beginPath();
-            context.moveTo(
-                flippedEyeCenterX - Math.cos(angle) * lineLength, 
-                eyeCenter.y - Math.sin(angle) * lineLength
-            );
-            context.lineTo(
-                flippedEyeCenterX + Math.cos(angle) * lineLength, 
-                eyeCenter.y + Math.sin(angle) * lineLength
-            );
-            context.stroke();
-        });
+        context.strokeStyle = 'rgba(40, 167, 69, 0.7)';
+        context.lineWidth = 2;
+        context.strokeRect(flippedX, y, width, height);
+
+        if (progress !== undefined) {
+            drawProgressBar(context, flippedX, y + height + 5, width, 8, progress);
+        }
+    }
+    
+    function drawProgressBar(context, x, y, width, height, progress) {
+        const greenColor = getComputedStyle(document.documentElement).getPropertyValue('--matrix-green').trim();
+        context.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        context.fillRect(x, y, width, height);
+        context.fillStyle = greenColor;
+        context.fillRect(x, y, width * progress, height);
     }
 
-    function drawFingerprintScan(context, hands) {
-        if (!fingerprintImage.complete || hands.length === 0) return;
-        
-        const wrist = hands[0].keypoints[0]; // Guna pergelangan tangan pertama yang dikesan
-        const videoRect = video.getBoundingClientRect();
-        const wristX = (wrist.x / video.videoWidth) * videoRect.width;
-        const wristY = (wrist.y / video.videoHeight) * videoRect.height;
-        const flippedWristX = overlayCanvas.width - wristX;
+    function initializeTTS() {
+        const setVoice = () => {
+            const voices = window.speechSynthesis.getVoices();
+            roboticVoice = voices.find(voice => voice.name.includes('Google US English')) ||
+                           voices.find(voice => voice.name.includes('Samantha')) || 
+                           voices.find(voice => voice.name.includes('Microsoft Zira')) || 
+                           voices.find(voice => voice.lang === 'en-US') ||
+                           voices[0];
+        };
 
-        const imgSize = 100;
-        context.globalAlpha = 0.8;
-        context.drawImage(fingerprintImage, flippedWristX - imgSize / 2, wristY - imgSize / 2, imgSize, imgSize);
-        
-        // Animasi garisan imbasan
-        const scanLineHeight = 4;
-        const scanLineY = (scanFrame * 2 % (imgSize + scanLineHeight)) - scanLineHeight;
-
-        context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--matrix-green').trim();
-        context.shadowColor = getComputedStyle(document.documentElement).getPropertyValue('--matrix-green').trim();
-        context.shadowBlur = 15;
-        
-        context.fillRect(
-            flippedWristX - imgSize / 2,
-            (wristY - imgSize / 2) + scanLineY,
-            imgSize,
-            scanLineHeight
-        );
-
-        context.shadowBlur = 0;
-        context.globalAlpha = 1.0;
+        if ('speechSynthesis' in window) {
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.onvoiceschanged = setVoice;
+            }
+            setVoice();
+        }
     }
-    // --- TAMAT FUNGSI GIMIK ---
+
+    function speak(text, onEndCallback = null) {
+        if ('speechSynthesis' in window && roboticVoice) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = roboticVoice;
+            utterance.pitch = 1.1;
+            utterance.rate = 1.1;
+            if (onEndCallback) {
+                utterance.onend = onEndCallback;
+            }
+            window.speechSynthesis.speak(utterance);
+        } else if (onEndCallback) {
+            onEndCallback();
+        }
+    }
+
+    function getGreeting() {
+        const hour = new Date().getHours();
+        if (hour < 12) return "Good Morning";
+        if (hour < 18) return "Good Afternoon";
+        return "Good Evening";
+    }
+
+    function playDistortionEffect(callback) {
+        let count = 0;
+        const distortionInterval = setInterval(() => {
+            const context = overlayCanvas.getContext('2d');
+            const w = overlayCanvas.width;
+            const h = overlayCanvas.height;
+            for (let i = 0; i < 10; i++) {
+                const x = Math.random() * w;
+                const y = Math.random() * h;
+                const spliceWidth = w - x;
+                const spliceHeight = Math.random() * 10 + 5;
+                context.drawImage(overlayCanvas, 0, y, spliceWidth, spliceHeight, x, y, spliceWidth, spliceHeight);
+                context.drawImage(overlayCanvas, spliceWidth, y, x, spliceHeight, 0, y, x, spliceHeight);
+            }
+            count++;
+            if (count > 20) {
+                clearInterval(distortionInterval);
+                callback();
+            }
+        }, 50);
+    }
     
     function showSuccessScreen() {
         clearAllIntervals();
@@ -605,7 +651,7 @@
             hideLoadingBar();
             unloadModels();
             
-            window.addEventListener('keydown', handleEscKey); // Listen for Esc key
+            window.addEventListener('keydown', handleEscKey);
 
             successScreen.style.display = 'flex';
             setTimeout(() => {
@@ -625,86 +671,114 @@
         startCamera().then(success => {
             if (!success) return;
             showVideoFeed();
-            controls.style.display = 'none'; // Hide controls for fullscreen view
+            controls.style.display = 'none';
             firstMatchTime = null;
+            lockedOnUser = null;
+            isReadyForHandScan = false;
             
-            window.addEventListener('keydown', handleEscKey); // Listen for Esc key
+            window.addEventListener('keydown', handleEscKey);
 
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(overlayCanvas, displaySize);
 
             detectionInterval = setInterval(async () => {
-                scanFrame++; // Increment frame kaunter untuk animasi
-                const [faceDetections, hands] = await Promise.all([
-                    faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors(),
-                    handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
-                ]);
-                
-                const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
                 const context = overlayCanvas.getContext('2d');
                 context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
                 
-                let recognizedFaceFoundThisFrame = false;
-                
-                if (resizedDetections.length > 0) {
-                    resizedDetections.forEach(detection => {
-                        if (detection.detection.score < 0.5) return;
+                if (lockedOnUser) {
+                    // --- FASA 2: PENGESAHAN TANGAN ---
+                    const [faceDetections, hands] = await Promise.all([
+                        faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })),
+                        handDetector ? handDetector.estimateHands(video, { flipHorizontal: false }) : Promise.resolve([])
+                    ]);
 
-                        // --- GIMIK IRIS ---
-                        drawIrisScan(context, detection.landmarks);
-                        
-                        const { flippedBox, bestMatch, score } = processDetection(detection);
-                        
-                        if (bestMatch.label !== 'unknown') {
-                            recognizedFaceFoundThisFrame = true;
-                            if (firstMatchTime === null) firstMatchTime = Date.now();
-                            new faceapi.draw.DrawBox(flippedBox, {boxColor: 'rgba(40, 167, 69, 0.7)'}).draw(overlayCanvas);
-                            if (Date.now() - firstMatchTime < 1000) {
-                                drawMatrixText(context, "ID DISAHKAN...", flippedBox.x + flippedBox.width / 2 - 80, flippedBox.y + flippedBox.height / 2);
-                            } else {
-                                const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
-                                drawMatrixInfo(context, flippedBox, matchedUser.name, matchedUser.position, score);
-                            }
-                        } else {
-                            new faceapi.draw.DrawBox(flippedBox, { label: `Pengecaman... (${score.toFixed(2)})`, boxColor: 'rgba(255, 193, 7, 0.7)' }).draw(overlayCanvas);
+                    const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
+                    
+                    if (resizedDetections.length > 0 && resizedDetections[0]) {
+                        const detection = resizedDetections[0];
+                        if (detection && detection.box) {
+                            const { box } = detection;
+                            const paddingX = box.width * 0.3;
+                            const paddingY = box.height * 0.7;
+                            const paddedBox = {
+                                x: box.x - paddingX / 2,
+                                y: box.y - paddingY * 0.6,
+                                width: box.width + paddingX,
+                                height: box.height + paddingY
+                            };
+                            const flippedBox = { x: overlayCanvas.width - paddedBox.x - paddedBox.width, y: paddedBox.y, width: paddedBox.width, height: paddedBox.height };
+                            
+                            new faceapi.draw.DrawBox(flippedBox, { boxColor: 'rgba(40, 167, 69, 0.7)' }).draw(overlayCanvas);
+                            drawMatrixInfo(context, flippedBox, lockedOnUser.name, lockedOnUser.position);
                         }
-                    });
-                }
-                
-                if (recognizedFaceFoundThisFrame && Date.now() - firstMatchTime >= 1000) {
-                    if (secondAuthReadyTime === null) {
-                        secondAuthReadyTime = Date.now() + 5000;
                     }
 
-                    if (Date.now() < secondAuthReadyTime) {
-                        const secondsLeft = Math.ceil((secondAuthReadyTime - Date.now()) / 1000);
-                        drawMatrixText(context, `BERSEDIA UNTUK PENGESAHAN KEDUA DALAM ${secondsLeft}...`, overlayCanvas.width / 2 - 280, 50);
-                        if (handVerificationTimer) { clearTimeout(handVerificationTimer); handVerificationTimer = null; }
-                    } else {
+                    if (isReadyForHandScan) {
                         const isHandDetected = hands.length > 0;
                         if (isHandDetected) {
-                            if (!handVerificationTimer) {
-                                handVerificationTimer = setTimeout(showSuccessScreen, 2000);
+                            if (handScanStartTime === null) handScanStartTime = Date.now();
+                            const handProgress = Math.min((Date.now() - handScanStartTime) / 3000, 1);
+                            drawHandBox(context, hands, handProgress);
+                            
+                            if (handProgress >= 1 && !finalVerificationTimer) {
+                                finalVerificationTimer = setTimeout(() => {
+                                    const greeting = getGreeting();
+                                    speak(`Second verification complete. ${greeting} ${lockedOnUser.name}`, () => {
+                                        playDistortionEffect(() => {
+                                            setTimeout(showSuccessScreen, 500);
+                                        });
+                                    });
+                                }, 100);
                             }
-                            // --- GIMIK CAP JARI ---
-                            drawFingerprintScan(context, hands);
-                            drawMatrixText(context, "MENGIMBAS CAP JARI...", overlayCanvas.width / 2 - 130, 50);
                         } else {
-                            if (handVerificationTimer) { clearTimeout(handVerificationTimer); handVerificationTimer = null; }
-                            drawMatrixText(context, "TUNJUKKAN TAPAK TANGAN UNTUK PENGESAHAN", overlayCanvas.width / 2 - 250, 50);
+                            handScanStartTime = null;
+                            if(finalVerificationTimer) clearTimeout(finalVerificationTimer);
+                            finalVerificationTimer = null;
+                            drawMatrixText(context, "SHOW YOUR PALM FOR VERIFICATION", overlayCanvas.width / 2, 50, 32);
                         }
                     }
-                } else {
-                    secondAuthReadyTime = null;
-                    if (handVerificationTimer) { clearTimeout(handVerificationTimer); handVerificationTimer = null; }
-                }
 
-                if (!recognizedFaceFoundThisFrame) {
-                    firstMatchTime = null;
-                    secondAuthReadyTime = null;
-                }
-                if (resizedDetections.filter(d=>d.detection.score >= 0.5).length === 0) {
-                    drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2 - 150, overlayCanvas.height / 2);
+                } else {
+                    // --- FASA 1: PENGESAHAN WAJAH ---
+                    const faceDetections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors();
+                    const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
+                    
+                    let recognizedFaceFoundThisFrame = false;
+
+                    if (resizedDetections.length > 0) {
+                        for (const detection of resizedDetections) {
+                            const { flippedBox, bestMatch } = processDetection(detection);
+                            if (bestMatch.label !== 'unknown') {
+                                recognizedFaceFoundThisFrame = true;
+                                if (firstMatchTime === null) firstMatchTime = Date.now();
+                                
+                                new faceapi.draw.DrawBox(flippedBox, { boxColor: 'rgba(40, 167, 69, 0.7)' }).draw(overlayCanvas);
+                                const faceProgress = Math.min((Date.now() - firstMatchTime) / 3000, 1);
+                                drawProgressBar(context, flippedBox.x, flippedBox.y + flippedBox.height + 5, flippedBox.width, 8, faceProgress);
+
+                                if (faceProgress >= 1) {
+                                    const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
+                                    if (matchedUser && !lockedOnUser) {
+                                        lockedOnUser = { name: matchedUser.name, position: matchedUser.position };
+                                        speak("Identity verified. Standby for second layer security.", () => {
+                                            isReadyForHandScan = true;
+                                        });
+                                    }
+                                }
+                                break; 
+                            }
+                        }
+                    }
+                    
+                    if (!recognizedFaceFoundThisFrame) {
+                        firstMatchTime = null;
+                        if (resizedDetections.length > 0) {
+                            const { flippedBox } = processDetection(resizedDetections[0]);
+                             new faceapi.draw.DrawBox(flippedBox, { label: `Mencari ID...` }).draw(overlayCanvas);
+                        } else {
+                            drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2, overlayCanvas.height / 2);
+                        }
+                    }
                 }
             }, 100);
         });
@@ -986,16 +1060,6 @@
         window.removeEventListener('keydown', handleEscKey); // Stop listening for Esc
         loadRegisteredUsers();
     }
-    
-    function initAssets() {
-        const fingerprintSVG = `
-        <svg fill="%COLOR%" width="100px" height="100px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 0c-8.836 0-16 7.164-16 16s7.164 16 16 16c8.837 0 16-7.164 16-16s-7.163-16-16-16zM16 30.031c-7.742 0-14.031-6.289-14.031-14.031s6.289-14.031 14.031-14.031c7.743 0 14.031 6.289 14.031 14.031s-6.288 14.031-14.031 14.031zM16.813 11.758c-0.453-0.18-0.969-0.281-1.508-0.281-0.781 0-1.523 0.219-2.188 0.617-0.562 0.336-1.023 0.781-1.375 1.305-0.109 0.156-0.203 0.32-0.289 0.492-0.25 0.516-0.398 1.078-0.398 1.664 0 0.531 0.109 1.047 0.328 1.531 0.18 0.406 0.422 0.766 0.727 1.078 0.562 0.562 1.289 0.898 2.078 0.898 0.727 0 1.406-0.273 1.938-0.75 0.312-0.281 0.57-0.625 0.766-1.016 0.25-0.484 0.391-1.016 0.391-1.578 0-0.672-0.18-1.312-0.516-1.891-0.289-0.516-0.711-0.938-1.258-1.25zM17.156 8.523c-0.484-0.172-1.008-0.266-1.555-0.266-0.672 0-1.328 0.141-1.945 0.414-0.719 0.32-1.344 0.797-1.844 1.391-0.938 1.125-1.508 2.57-1.508 4.125 0 0.742 0.195 1.461 0.57 2.109 0.438 0.75 1.078 1.375 1.844 1.812 0.438 0.25 0.906 0.438 1.398 0.57 0.828 0.211 1.688 0.211 2.523 0 0.469-0.125 0.922-0.305 1.344-0.531 0.828-0.438 1.539-1.078 2.078-1.875 0.352-0.523 0.609-1.109 0.758-1.742 0.219-0.828 0.219-1.687 0-2.516-0.141-0.531-0.375-1.031-0.68-1.484-0.57-0.828-1.344-1.5-2.25-1.969-0.469-0.242-0.969-0.43-1.492-0.555zM22.719 19.148c-0.609 0.703-1.344 1.281-2.188 1.68-0.352 0.164-0.727 0.305-1.109 0.414-0.438 0.117-0.883 0.195-1.336 0.25-0.18 0.023-0.367 0.047-0.555 0.062-0.359 0.039-0.719 0.055-1.078 0.055-0.484 0-0.961-0.031-1.43-0.094-0.43-0.055-0.852-0.141-1.266-0.266-0.742-0.219-1.445-0.547-2.078-0.969-0.672-0.445-1.25-1-1.711-1.648-0.227-0.32-0.422-0.656-0.578-1.016-0.328-0.719-0.5-1.5-0.5-2.32 0-1.141 0.391-2.227 1.094-3.141 0.727-0.938 1.742-1.648 2.891-2.078 0.5-0.18 1.023-0.305 1.555-0.375 0.547-0.070 1.094-0.102 1.648-0.102 0.656 0 1.305 0.047 1.945 0.148 0.75 0.117 1.477 0.328 2.164 0.641 1.25 0.555 2.32 1.43 3.125 2.539 0.484 0.656 0.859 1.406 1.078 2.219 0.25 0.938 0.25 1.914 0 2.859-0.141 0.531-0.352 1.039-0.625 1.516-0.281 0.484-0.609 0.93-0.984 1.328z"></path>
-        </svg>
-        `.replace('%COLOR%', getComputedStyle(document.documentElement).getPropertyValue('--matrix-green').trim());
-
-        fingerprintImage.src = 'data:image/svg+xml;base64,' + btoa(fingerprintSVG);
-    }
 
     registerBtn.addEventListener('click', () => {
         if (registeredUsers.length >= 20) {
@@ -1039,7 +1103,6 @@
     // Initial App Load
     document.addEventListener('DOMContentLoaded', () => {
         setPlaceholderContent(initialPlaceholderContent);
-        initAssets();
         initializeAppFlow();
     });
 
