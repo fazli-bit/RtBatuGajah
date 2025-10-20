@@ -39,18 +39,23 @@
             flex-direction: column;
             position: relative;
         }
-        #video-container {
+        #video-container, #montage-container {
             position: relative;
             background-color: #000;
             width: 100%;
             flex-grow: 1;
             overflow: hidden;
         }
-        #video {
+        #montage-container {
+            display: none;
+        }
+        #video, #montage-video {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            transform: scaleX(-1);
             object-fit: cover;
+        }
+        #video {
+            transform: scaleX(-1);
             display: none;
         }
         #overlay-canvas {
@@ -70,7 +75,7 @@
             display: none;
             justify-content: center;
             align-items: center;
-            z-index: 200;
+            z-index: 400; /* Pastikan ia di atas skrin mula */
             color: white;
             flex-direction: column;
         }
@@ -90,7 +95,7 @@
         #progress-bar {
             width: 0%; height: 100%;
             background: var(--matrix-green);
-            transition: width 0.5s ease;
+            transition: width 1.5s linear;
         }
 
         #success-screen, #start-screen {
@@ -140,6 +145,20 @@
             color: #adb5bd;
             z-index: 50;
         }
+        #fullscreen-btn {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            z-index: 301;
+        }
+        #fullscreen-btn svg {
+            width: 100%;
+            height: 100%;
+            fill: var(--matrix-green);
+        }
     </style>
 </head>
 <body>
@@ -148,11 +167,17 @@
     <div id="error-message"></div>
     <div id="start-screen">
         <h1>Pengesahan identiti akan dimulakan sila bersedia</h1>
+        <div id="fullscreen-btn" title="Skrin Penuh">
+            <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        </div>
     </div>
     <div id="video-container">
         <video id="video" playsinline autoplay muted></video>
         <canvas id="overlay-canvas"></canvas>
-        <div id="version-info">versi 1.5.7 (Modul Pengesahan)</div>
+        <div id="version-info">versi 1.6.1 (Modul Pengesahan)</div>
+    </div>
+    <div id="montage-container">
+        <video id="montage-video" src="vid/montaj.mp4" playsinline></video>
     </div>
     <div id="success-screen">
         <canvas id="matrix-canvas"></canvas>
@@ -189,14 +214,17 @@
     const video = document.getElementById('video');
     const overlayCanvas = document.getElementById('overlay-canvas');
     const errorMessage = document.getElementById('error-message');
-    const successScreen = document.getElementById('success-screen');
-    const successTitle = document.getElementById('success-title');
-    const successSubtitle = document.getElementById('success-subtitle');
-    const matrixCanvas = document.getElementById('matrix-canvas');
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingText = document.getElementById('loading-text');
     const progressBar = document.getElementById('progress-bar');
     const startScreen = document.getElementById('start-screen');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const montageContainer = document.getElementById('montage-container');
+    const montageVideo = document.getElementById('montage-video');
+    const successScreen = document.getElementById('success-screen');
+    const successTitle = document.getElementById('success-title');
+    const successSubtitle = document.getElementById('success-subtitle');
+    const matrixCanvas = document.getElementById('matrix-canvas');
 
     let stream = null;
     let detectionInterval = null;
@@ -212,16 +240,16 @@
     let isReadyForHandScan = false;
     let lastKnownFlippedBox = null;
     let recognitionPhase = 'idle';
+    let modelsReady = false;
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
     function showLoadingBar(text, duration) {
         loadingText.textContent = text;
+        progressBar.style.transition = `width ${duration}s linear`;
         progressBar.style.width = '0%';
         loadingOverlay.style.display = 'flex';
-        void progressBar.offsetWidth;
-        progressBar.style.transition = `width ${duration}s ease-in-out`;
-        progressBar.style.width = '100%';
+        setTimeout(() => { progressBar.style.width = '100%'; }, 10);
     }
 
     function hideLoadingBar() {
@@ -247,13 +275,7 @@
             
             await loadRegisteredUsers();
             hideLoadingBar();
-
-            if (registeredUsers.length > 0) {
-                startRecognition();
-            } else {
-                showError("Tiada pengguna didaftarkan. Sila ke laman pendaftaran.");
-                setTimeout(() => { window.location.href = 'pendaftaran.html'; }, 5000);
-            }
+            modelsReady = true;
 
         } catch (err) {
             console.error(err);
@@ -426,166 +448,146 @@
         }, 50);
     }
     
-    function showSuccessScreen() {
+    function showSuccessAndMontage() {
         clearAllIntervals();
         stopCamera();
+        
+        document.getElementById('video-container').style.display = 'none';
+        successScreen.style.display = 'flex';
 
-        showLoadingBar('Memproses Pelancaran...', 1);
         setTimeout(() => {
-            hideLoadingBar();
-            
-            window.addEventListener('keydown', handleEscKey);
+            successScreen.style.opacity = 1;
+            startMatrixAnimation();
+            decodeTextEffect('PENGESAHAN BERJAYA', successTitle, () => {
+                decodeTextEffect('Pelancaran Telah Disempurnakan', successSubtitle, null);
+            });
 
-            successScreen.style.display = 'flex';
             setTimeout(() => {
-                successScreen.style.opacity = 1;
-                startMatrixAnimation();
+                successScreen.style.display = 'none';
+                stopMatrixAnimation();
+                showLoadingBar('Memproses Pelancaran...', 1.5);
                 setTimeout(() => {
-                    decodeTextEffect('PENGESAHAN BERJAYA', successTitle, () => {
-                        decodeTextEffect('Pelancaran Telah Disempurnakan', successSubtitle, null);
-                    });
-                }, 500);
-            }, 10);
-        }, 1000);
+                    hideLoadingBar();
+                    montageContainer.style.display = 'block';
+                    montageVideo.play();
+                }, 1500);
+            }, 4000); 
+
+        }, 10);
     }
 
     function startRecognition() {
-        clearAllIntervals();
-        startCamera().then(success => {
-            if (!success) return;
+        const setupDetection = () => {
+            const displaySize = { width: video.clientWidth, height: video.clientHeight };
+            if (displaySize.width === 0 || displaySize.height === 0) {
+                setTimeout(setupDetection, 50);
+                return;
+            }
+
+            lockedOnUser = null;
+            isReadyForHandScan = false;
+            lastKnownFlippedBox = null;
+            window.addEventListener('keydown', handleEscKey);
+            faceapi.matchDimensions(overlayCanvas, displaySize);
             
-            const setupDetection = () => {
-                const displaySize = { width: video.clientWidth, height: video.clientHeight };
-                if (displaySize.width === 0 || displaySize.height === 0) {
-                    setTimeout(setupDetection, 50);
+            recognitionPhase = 'commencing';
+            speak("Commencing face recognition.", () => {
+                recognitionPhase = 'searching';
+            });
+
+            detectionInterval = setInterval(async () => {
+                const context = overlayCanvas.getContext('2d');
+                context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                
+                if (recognitionPhase === 'commencing') {
+                    drawMatrixText(context, "COMMENCING FACE RECOGNITION", overlayCanvas.width / 2, overlayCanvas.height / 2);
                     return;
                 }
 
-                lockedOnUser = null;
-                isReadyForHandScan = false;
-                lastKnownFlippedBox = null;
-                window.addEventListener('keydown', handleEscKey);
-                faceapi.matchDimensions(overlayCanvas, displaySize);
-                
-                recognitionPhase = 'commencing';
-                speak("Commencing face recognition.", () => {
-                    recognitionPhase = 'searching';
-                });
-
-                detectionInterval = setInterval(async () => {
-                    const context = overlayCanvas.getContext('2d');
-                    context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                if (lockedOnUser) {
+                    const hands = await handDetector.estimateHands(video, { flipHorizontal: false });
                     
-                    if (recognitionPhase === 'commencing') {
-                        drawMatrixText(context, "COMMENCING FACE RECOGNITION", overlayCanvas.width / 2, overlayCanvas.height / 2);
-                        return;
+                    if (lastKnownFlippedBox) {
+                        new faceapi.draw.DrawBox(lastKnownFlippedBox, { boxColor: 'rgba(40, 167, 69, 0.7)' }).draw(overlayCanvas);
+                        drawMatrixInfo(context, lastKnownFlippedBox, lockedOnUser.name, lockedOnUser.position);
                     }
 
-                    if (lockedOnUser) {
-                        const [faceDetections, hands] = await Promise.all([
-                            faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })),
-                            handDetector.estimateHands(video, { flipHorizontal: false })
-                        ]);
-                        const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
-                        
-                        if (resizedDetections.length > 0 && resizedDetections[0]) {
-                            const detection = resizedDetections[0];
-                            if(detection && detection.box){
-                                 const { box } = detection;
-                                 const paddingX = box.width * 0.3;
-                                const paddingY = box.height * 0.7;
-                                const paddedBox = {
-                                    x: box.x - paddingX / 2,
-                                    y: box.y - paddingY * 0.6,
-                                    width: box.width + paddingX,
-                                    height: box.height + paddingY
-                                };
-                                const flippedBox = { x: overlayCanvas.width - paddedBox.x - paddedBox.width, y: paddedBox.y, width: paddedBox.width, height: paddedBox.height };
-                                lastKnownFlippedBox = flippedBox;
+                    if (isReadyForHandScan) {
+                        const isHandDetected = hands.length > 0;
+                        if (isHandDetected) {
+                            if (handScanStartTime === null) handScanStartTime = Date.now();
+                            const handProgress = Math.min((Date.now() - handScanStartTime) / 3000, 1);
+                            drawHandBox(context, hands, handProgress);
+                            
+                            if (handProgress >= 1 && !finalVerificationTimer) {
+                                finalVerificationTimer = setTimeout(() => {
+                                    const greeting = getGreeting();
+                                    speak(`Second verification complete. ${greeting} ${lockedOnUser.name}`, () => {
+                                        playDistortionEffect(() => setTimeout(showSuccessAndMontage, 500));
+                                    });
+                                }, 100);
                             }
+                        } else {
+                            handScanStartTime = null;
+                            if(finalVerificationTimer) clearTimeout(finalVerificationTimer);
+                            finalVerificationTimer = null;
+                            drawMatrixText(context, "SHOW YOUR PALM FOR VERIFICATION", overlayCanvas.width / 2, 50, 32);
                         }
+                    }
 
-                        if (lastKnownFlippedBox) {
-                            new faceapi.draw.DrawBox(lastKnownFlippedBox, { boxColor: 'rgba(40, 167, 69, 0.7)' }).draw(overlayCanvas);
-                            drawMatrixInfo(context, lastKnownFlippedBox, lockedOnUser.name, lockedOnUser.position);
-                        }
+                } else {
+                    const faceDetections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors();
+                    const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
+                    
+                    let recognizedFaceFoundThisFrame = false;
 
-                        if (isReadyForHandScan) {
-                            const isHandDetected = hands.length > 0;
-                            if (isHandDetected) {
-                                if (handScanStartTime === null) handScanStartTime = Date.now();
-                                const handProgress = Math.min((Date.now() - handScanStartTime) / 3000, 1);
-                                drawHandBox(context, hands, handProgress);
+                    if (resizedDetections.length > 0) {
+                        for (const detection of resizedDetections) {
+                            const { flippedBox, bestMatch } = processDetection(detection);
+                            if (bestMatch.label !== 'unknown') {
+                                recognizedFaceFoundThisFrame = true;
+                                if (firstMatchTime === null) firstMatchTime = Date.now();
                                 
-                                if (handProgress >= 1 && !finalVerificationTimer) {
-                                    finalVerificationTimer = setTimeout(() => {
-                                        const greeting = getGreeting();
-                                        speak(`Second verification complete. ${greeting} ${lockedOnUser.name}`, () => {
-                                            playDistortionEffect(() => setTimeout(showSuccessScreen, 500));
-                                        });
-                                    }, 100);
-                                }
-                            } else {
-                                handScanStartTime = null;
-                                if(finalVerificationTimer) clearTimeout(finalVerificationTimer);
-                                finalVerificationTimer = null;
-                                drawMatrixText(context, "SHOW YOUR PALM FOR VERIFICATION", overlayCanvas.width / 2, 50, 32);
-                            }
-                        }
+                                new faceapi.draw.DrawBox(flippedBox, { boxColor: 'rgba(40, 167, 69, 0.7)' }).draw(overlayCanvas);
+                                const elapsedTime = Date.now() - firstMatchTime;
 
-                    } else {
-                        const faceDetections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors();
-                        const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
-                        
-                        let recognizedFaceFoundThisFrame = false;
+                                if (elapsedTime >= 2000) {
+                                    const faceProgress = Math.min((elapsedTime - 2000) / 3000, 1);
+                                    drawProgressBar(context, flippedBox.x, flippedBox.y + flippedBox.height + 5, flippedBox.width, 8, faceProgress);
 
-                        if (resizedDetections.length > 0) {
-                            for (const detection of resizedDetections) {
-                                const { flippedBox, bestMatch } = processDetection(detection);
-                                if (bestMatch.label !== 'unknown') {
-                                    recognizedFaceFoundThisFrame = true;
-                                    if (firstMatchTime === null) firstMatchTime = Date.now();
-                                    
-                                    new faceapi.draw.DrawBox(flippedBox, { boxColor: 'rgba(40, 167, 69, 0.7)' }).draw(overlayCanvas);
-                                    const elapsedTime = Date.now() - firstMatchTime;
-
-                                    if (elapsedTime >= 2000) {
-                                        const faceProgress = Math.min((elapsedTime - 2000) / 3000, 1);
-                                        drawProgressBar(context, flippedBox.x, flippedBox.y + flippedBox.height + 5, flippedBox.width, 8, faceProgress);
-
-                                        if (faceProgress >= 1) {
-                                            const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
-                                            if (matchedUser && !lockedOnUser) {
-                                                lockedOnUser = { name: matchedUser.name, position: matchedUser.position };
-                                                speak("Identity verified. Standby for second layer security.", () => { isReadyForHandScan = true; });
-                                            }
+                                    if (faceProgress >= 1) {
+                                        const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
+                                        if (matchedUser && !lockedOnUser) {
+                                            lockedOnUser = { name: matchedUser.name, position: matchedUser.position };
+                                            lastKnownFlippedBox = flippedBox;
+                                            speak("Identity verified. Standby for second layer security.", () => { isReadyForHandScan = true; });
                                         }
                                     }
-                                    
-                                    if (lockedOnUser) {
-                                       drawMatrixInfo(context, flippedBox, lockedOnUser.name, lockedOnUser.position);
-                                    }
-                                    break; 
                                 }
-                            }
-                        }
-                        
-                        if (!recognizedFaceFoundThisFrame) {
-                            firstMatchTime = null;
-                            if (resizedDetections.length > 0) {
-                                const { flippedBox } = processDetection(resizedDetections[0]);
-                                new faceapi.draw.DrawBox(flippedBox, { label: `Mencari ID...` }).draw(overlayCanvas);
-                            } else {
-                                if(recognitionPhase === 'searching') {
-                                    drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2, overlayCanvas.height / 2);
+                                
+                                if (lockedOnUser) {
+                                   drawMatrixInfo(context, flippedBox, lockedOnUser.name, lockedOnUser.position);
                                 }
+                                break; 
                             }
                         }
                     }
-                }, 100);
-            }
-            setupDetection();
-        });
+                    
+                    if (!recognizedFaceFoundThisFrame) {
+                        firstMatchTime = null;
+                        if (resizedDetections.length > 0) {
+                            const { flippedBox } = processDetection(resizedDetections[0]);
+                             new faceapi.draw.DrawBox(flippedBox, { label: `Mencari ID...` }).draw(overlayCanvas);
+                        } else {
+                            if(recognitionPhase === 'searching') {
+                                drawMatrixText(context, "SEMAKAN SEDANG DIJALANKAN", overlayCanvas.width / 2, overlayCanvas.height / 2);
+                            }
+                        }
+                    }
+                }
+            }, 100);
+        }
+        setupDetection();
     }
 
     const processDetection = (detection) => {
@@ -684,11 +686,39 @@
         errorMessage.style.display = 'block';
     }
     
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+    
     document.addEventListener('DOMContentLoaded', () => {
         initializeTTS();
+        initializeAppFlow();
+        fullscreenBtn.addEventListener('click', toggleFullScreen);
+        montageVideo.addEventListener('ended', () => {
+            montageContainer.style.display = 'none';
+            const startScreenH1 = startScreen.querySelector('h1');
+            startScreenH1.textContent = "PELANCARAN SELESAI";
+            startScreen.style.display = 'flex';
+            fullscreenBtn.style.display = 'none';
+        });
+
         startScreen.addEventListener('click', () => {
+            if (!modelsReady) { 
+                showLoadingBar('Sila tunggu model AI selesai dimuat turun...');
+                return;
+            }
             startScreen.style.display = 'none';
-            initializeAppFlow();
+            startCamera().then(success => {
+                if(success) {
+                    startRecognition();
+                }
+            });
         }, { once: true });
     });
 
