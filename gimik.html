@@ -39,6 +39,9 @@
             flex-direction: column;
             position: relative;
         }
+        .hide-cursor {
+            cursor: none;
+        }
         #video-container, #montage-container {
             position: relative;
             background-color: #000;
@@ -174,7 +177,7 @@
     <div id="video-container">
         <video id="video" playsinline autoplay muted></video>
         <canvas id="overlay-canvas"></canvas>
-        <div id="version-info">versi 1.6.2 (Modul Pengesahan)</div>
+        <div id="version-info">versi 1.6.10 (Modul Pengesahan)</div>
     </div>
     <div id="montage-container">
         <video id="montage-video" src="vid/montaj.mp4" playsinline></video>
@@ -211,6 +214,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    const appContainer = document.getElementById('app-container');
     const video = document.getElementById('video');
     const overlayCanvas = document.getElementById('overlay-canvas');
     const errorMessage = document.getElementById('error-message');
@@ -241,6 +245,9 @@
     let lastKnownFlippedBox = null;
     let recognitionPhase = 'idle';
     let modelsReady = false;
+    let failSafeActive = false;
+    let failSafeTimeout = null;
+    let mousePosition = { x: 0, y: 0 };
 
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
@@ -285,19 +292,23 @@
     }
 
     async function loadRegisteredUsers() {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        const users = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            users.push({
-                name: data.name, position: data.position,
-                descriptor: new Float32Array(data.descriptor)
+        try {
+            const querySnapshot = await getDocs(collection(db, "users"));
+            const users = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                users.push({
+                    name: data.name, position: data.position,
+                    descriptor: new Float32Array(data.descriptor)
+                });
             });
-        });
-        registeredUsers = users;
-        if (users.length > 0) {
-            const labeledDescriptors = users.map(user => new faceapi.LabeledFaceDescriptors(user.name, [user.descriptor]));
-            faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
+            registeredUsers = users;
+            if (users.length > 0) {
+                const labeledDescriptors = users.map(user => new faceapi.LabeledFaceDescriptors(user.name, [user.descriptor]));
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
+            }
+        } catch (e) {
+            showError("Gagal memuat turun data pengguna.");
         }
     }
     
@@ -344,7 +355,6 @@
 
         context.fillStyle = 'rgba(0, 0, 0, 0.7)';
         context.fillRect(startX, startY, textWidth + 20, textHeight);
-
         drawMatrixText(context, textLines[0], startX + 10, startY + 20, 20, 'left');
         drawMatrixText(context, textLines[1], startX + 10, startY + 45, 20, 'left');
     }
@@ -487,12 +497,19 @@
             lockedOnUser = null;
             isReadyForHandScan = false;
             lastKnownFlippedBox = null;
+            failSafeActive = false;
+            if(failSafeTimeout) clearTimeout(failSafeTimeout);
+            
+            appContainer.classList.add('hide-cursor');
             window.addEventListener('keydown', handleEscKey);
             faceapi.matchDimensions(overlayCanvas, displaySize);
             
             recognitionPhase = 'commencing';
             speak("Commencing face recognition.", () => {
                 recognitionPhase = 'searching';
+                failSafeTimeout = setTimeout(() => {
+                    if (!lockedOnUser) failSafeActive = true;
+                }, 15000);
             });
 
             detectionInterval = setInterval(async () => {
@@ -505,7 +522,10 @@
                 }
 
                 if (lockedOnUser) {
-                    const hands = await handDetector.estimateHands(video, { flipHorizontal: false });
+                    let hands = [];
+                    if (!failSafeActive) {
+                       hands = await handDetector.estimateHands(video, { flipHorizontal: false });
+                    }
                     
                     if (lastKnownFlippedBox) {
                         new faceapi.draw.DrawBox(lastKnownFlippedBox, { boxColor: 'rgba(40, 167, 69, 0.7)' }).draw(overlayCanvas);
@@ -514,10 +534,17 @@
 
                     if (isReadyForHandScan) {
                         const isHandDetected = hands.length > 0;
-                        if (isHandDetected) {
-                            if (handScanStartTime === null) handScanStartTime = Date.now();
+                        if (isHandDetected || (failSafeActive && recognitionPhase === 'verifyingHand')) {
+                             if (handScanStartTime === null) handScanStartTime = Date.now();
                             const handProgress = Math.min((Date.now() - handScanStartTime) / 3000, 1);
-                            drawHandBox(context, hands, handProgress);
+                            
+                            if (failSafeActive) {
+                                const box = {x: mousePosition.x - 150, y: mousePosition.y - 200, width: 300, height: 400};
+                                new faceapi.draw.DrawBox(box, { boxColor: 'rgba(40, 167, 69, 0.7)' }).draw(overlayCanvas);
+                                drawProgressBar(context, box.x, box.y + box.height + 5, box.width, 8, handProgress);
+                            } else {
+                                drawHandBox(context, hands, handProgress);
+                            }
                             
                             if (handProgress >= 1 && !finalVerificationTimer) {
                                 finalVerificationTimer = setTimeout(() => {
@@ -531,10 +558,14 @@
                             handScanStartTime = null;
                             if(finalVerificationTimer) clearTimeout(finalVerificationTimer);
                             finalVerificationTimer = null;
-                            drawMatrixText(context, "SHOW YOUR PALM FOR VERIFICATION", overlayCanvas.width / 2, 50, 32);
+                            const text = failSafeActive ? "SHOW YOUR PALM FOR VERIFICATION!" : "SHOW YOUR PALM FOR VERIFICATION";
+                            drawMatrixText(context, text, overlayCanvas.width / 2, 50, 32);
                         }
                     }
-
+                } else if (failSafeActive) {
+                    const box = { x: mousePosition.x - 150, y: mousePosition.y - 200, width: 300, height: 400 };
+                    new faceapi.draw.DrawBox(box, { boxColor: 'rgba(255, 193, 7, 0.7)' }).draw(overlayCanvas);
+                    drawMatrixText(context, "BERSEDIA UNTUK PENGESAHAN WAJAH", overlayCanvas.width / 2, 50, 32);
                 } else {
                     const faceDetections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors();
                     const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
@@ -558,6 +589,8 @@
                                     if (faceProgress >= 1) {
                                         const matchedUser = registeredUsers.find(user => user.name === bestMatch.label);
                                         if (matchedUser && !lockedOnUser) {
+                                            if(failSafeTimeout) clearTimeout(failSafeTimeout);
+                                            failSafeActive = false;
                                             lockedOnUser = { name: matchedUser.name, position: matchedUser.position };
                                             lastKnownFlippedBox = flippedBox;
                                             speak("Identity verified. Standby for second layer security.", () => { isReadyForHandScan = true; });
@@ -678,6 +711,7 @@
         clearAllIntervals();
         stopMatrixAnimation();
         stopCamera();
+        appContainer.classList.remove('hide-cursor');
         window.location.href = 'pendaftaran.html';
     }
 
@@ -699,13 +733,42 @@
     document.addEventListener('DOMContentLoaded', () => {
         initializeTTS();
         initializeAppFlow();
-        fullscreenBtn.addEventListener('click', toggleFullScreen);
+        
+        fullscreenBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleFullScreen();
+        });
+
         montageVideo.addEventListener('ended', () => {
             montageContainer.style.display = 'none';
             const startScreenH1 = startScreen.querySelector('h1');
             startScreenH1.textContent = "PELANCARAN SELESAI";
             startScreen.style.display = 'flex';
             fullscreenBtn.style.display = 'none';
+            appContainer.classList.remove('hide-cursor');
+        });
+
+        overlayCanvas.addEventListener('mousemove', (e) => {
+            const rect = overlayCanvas.getBoundingClientRect();
+            mousePosition.x = e.clientX - rect.left;
+            mousePosition.y = e.clientY - rect.top;
+        });
+
+        overlayCanvas.addEventListener('click', () => {
+            if (failSafeActive) {
+                if (!lockedOnUser) {
+                    lockedOnUser = { 
+                        name: "YB PUAN SANDREA NG SHY CHING", 
+                        position: "PENGERUSI JAWATANKUASA PERUMAHAN DAN KERAJAAN TEMPATAN" 
+                    };
+                    lastKnownFlippedBox = { x: mousePosition.x - 150, y: mousePosition.y - 200, width: 300, height: 400 };
+                    speak("Identity verified. Standby for second layer security.", () => { 
+                        isReadyForHandScan = true; 
+                    });
+                } else if (isReadyForHandScan) {
+                    recognitionPhase = 'verifyingHand';
+                }
+            }
         });
 
         startScreen.addEventListener('click', () => {
