@@ -174,7 +174,7 @@
     <div id="video-container">
         <video id="video" playsinline autoplay muted></video>
         <canvas id="overlay-canvas"></canvas>
-        <div id="version-info">versi 1.6.1 (Modul Pengesahan)</div>
+        <div id="version-info">versi 1.6.2 (Modul Pengesahan)</div>
     </div>
     <div id="montage-container">
         <video id="montage-video" src="vid/montaj.mp4" playsinline></video>
@@ -321,12 +321,12 @@
         }
     }
     
-    function drawMatrixText(context, text, x, y, size = 24) {
+    function drawMatrixText(context, text, x, y, size = 24, align = 'center') {
         context.font = `${size}px VT323, monospace`;
         context.fillStyle = '#39FF14';
         context.shadowColor = '#39FF14';
         context.shadowBlur = 10;
-        context.textAlign = 'center';
+        context.textAlign = align;
         context.fillText(text, x, y);
     }
     
@@ -344,9 +344,9 @@
 
         context.fillStyle = 'rgba(0, 0, 0, 0.7)';
         context.fillRect(startX, startY, textWidth + 20, textHeight);
-        context.textAlign = 'left';
-        drawMatrixText(context, textLines[0], startX + 10, startY + 20, 20);
-        drawMatrixText(context, textLines[1], startX + 10, startY + 45, 20);
+
+        drawMatrixText(context, textLines[0], startX + 10, startY + 20, 20, 'left');
+        drawMatrixText(context, textLines[1], startX + 10, startY + 45, 20, 'left');
     }
 
     function drawHandBox(context, hands, progress) {
