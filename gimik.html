@@ -558,14 +558,14 @@
                             handScanStartTime = null;
                             if(finalVerificationTimer) clearTimeout(finalVerificationTimer);
                             finalVerificationTimer = null;
-                            const text = failSafeActive ? "SHOW YOUR PALM FOR VERIFICATION!" : "SHOW YOUR PALM FOR VERIFICATION";
+                            const text = failSafeActive ? "KLIK UNTUK PENGESAHAN TANGAN" : "SHOW YOUR PALM FOR VERIFICATION";
                             drawMatrixText(context, text, overlayCanvas.width / 2, 50, 32);
                         }
                     }
                 } else if (failSafeActive) {
                     const box = { x: mousePosition.x - 150, y: mousePosition.y - 200, width: 300, height: 400 };
                     new faceapi.draw.DrawBox(box, { boxColor: 'rgba(255, 193, 7, 0.7)' }).draw(overlayCanvas);
-                    drawMatrixText(context, "BERSEDIA UNTUK PENGESAHAN WAJAH", overlayCanvas.width / 2, 50, 32);
+                    drawMatrixText(context, "KLIK UNTUK PENGESAHAN WAJAH", overlayCanvas.width / 2, 50, 32);
                 } else {
                     const faceDetections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptors();
                     const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
