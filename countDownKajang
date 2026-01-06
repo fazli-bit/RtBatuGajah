@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kira Detik Publisiti</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #ffffef; /* Latar belakang terang */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden; /* Sembunyikan tatalan */
+            padding: 1rem;
+            box-sizing: border-box;
+            font-family: "Arial, sans-serif";
+        }
+        canvas {
+            background-color: #023f33;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    
+<canvas id="countdownCanvas"></canvas>
+
+<script>
+// --- KONFIGURASI KIRA DETIK ---
+
+// 1. Tetapkan tarikh mula dan tamat tempoh publisiti
+// Format: "Month Day, Year HH:MM:SS"
+const startDateString = "Jan 14, 2026 00:00:00";
+const endDateString = "Feb 13, 2026 23:59:59";
+
+// 2. Sesuaikan teks dan rupa
+const config = {
+    textColor: "#ecf0f1",       // Warna teks utama
+    expiredColor: "#e74c3c",    // Warna teks apabila tamat
+    cardColor: "#2c3e50",       // Warna latar belakang kad
+    fontFamily: "Arial, sans-serif",
+    
+    // Teks untuk setiap keadaan
+    mainTitleLine1: "Publisiti Draf Rancangan Kawasan Khas",
+    mainTitleLine2: "Pusat Bandar Kajang",
+    subtitleBefore: "Publisiti akan bermula lagi",
+    subtitleDuring: "Tempoh Publisiti Akan Tamat Dalam",
+    expiredMessage: "Tempoh Publisiti Telah Tamat"
+};
+
+// --- LOGIK KIRA DETIK ---
+
+const canvas = document.getElementById('countdownCanvas');
+const ctx = canvas.getContext('2d');
+
+// Saiz canvas
+canvas.width = 800;
+canvas.height = 300;
+
+// Helper function to draw rounded rectangles for the cards
+function drawRoundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+
+function draw() {
+    // Dapatkan tarikh dan masa dalam bentuk nombor
+    const startDate = new Date(startDateString).getTime();
+    const endDate = new Date(endDateString).getTime();
+    const now = new Date().getTime();
+
+    // Bersihkan canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Lukis tajuk utama
+    ctx.font = `bold 22px ${config.fontFamily}`;
+    ctx.fillStyle = config.textColor;
+    ctx.textAlign = "center";
+    ctx.fillText(config.mainTitleLine1, canvas.width / 2, 40);
+    ctx.fillText(config.mainTitleLine2, canvas.width / 2, 70);
+
+    let distance;
+    let subtitle;
+    let showCountdown = true;
+
+    // Tentukan keadaan semasa (sebelum, semasa, atau selepas)
+    if (now < startDate) {
+        distance = startDate - now;
+        subtitle = config.subtitleBefore;
+    } else if (now < endDate) {
+        distance = endDate - now;
+        subtitle = config.subtitleDuring;
+    } else {
+        showCountdown = false;
+        clearInterval(interval); // Hentikan kiraan apabila tamat
+    }
+
+    if (showCountdown) {
+        ctx.font = `20px ${config.fontFamily}`;
+        ctx.fillText(subtitle, canvas.width / 2, 110);
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        const timeUnits = [
+            { value: days, label: 'Hari' }, { value: hours, label: 'Jam' },
+            { value: minutes, label: 'Minit' }, { value: seconds, label: 'Saat' }
+        ];
+
+        // Pengiraan untuk memusatkan kad-kad
+        const cardWidth = 140;
+        const cardHeight = 120;
+        const cardGap = 20;
+        const totalWidth = (cardWidth * 4) + (cardGap * 3);
+        const startX = (canvas.width - totalWidth) / 2;
+        const cardY = 130;
+
+        timeUnits.forEach((unit, index) => {
+            const cardX = startX + index * (cardWidth + cardGap);
+            const textX = cardX + cardWidth / 2;
+
+            // Lukis bayang-bayang untuk kad
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 4;
+            ctx.shadowOffsetY = 4;
+            
+            // Lukis kad
+            ctx.fillStyle = config.cardColor;
+            drawRoundRect(ctx, cardX, cardY, cardWidth, cardHeight, 10);
+            ctx.fill();
+
+            // Reset bayang-bayang supaya tidak menjejaskan teks
+            ctx.shadowColor = 'transparent';
+
+            // Lukis nombor
+            ctx.font = `bold 60px ${config.fontFamily}`;
+            ctx.fillStyle = config.textColor;
+            ctx.fillText(String(unit.value).padStart(2, '0'), textX, cardY + 75);
+            
+            // Lukis label
+            ctx.font = `16px ${config.fontFamily}`;
+            ctx.fillText(unit.label, textX, cardY + 100);
+        });
+
+    } else {
+        ctx.font = `bold 48px ${config.fontFamily}`;
+        ctx.fillStyle = config.expiredColor;
+        ctx.fillText(config.expiredMessage, canvas.width / 2, canvas.height / 2 + 40);
+    }
+}
+
+// Jalankan fungsi lukisan setiap saat
+const interval = setInterval(draw, 1000);
+
+// Panggil sekali di awal untuk paparan segera
+draw();
+
+</script>
+
+</body>
+</html>
+
+
