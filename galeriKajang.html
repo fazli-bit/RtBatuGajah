@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galeri Digital 3D Interaktif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Menambah importmap untuk menguruskan modul Three.js -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"
+        }
+    }
+    </script>
+    <style>
+        body { margin: 0; font-family: 'Inter', sans-serif; background-color: #000; color: white; overflow: hidden; }
+        canvas { display: block; }
+        #blocker { position: absolute; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; text-align: center; z-index: 10; }
+        #instructions { width: 80%; max-width: 500px; cursor: pointer; padding: 20px; background-color: #111827; border-radius: 10px; border: 1px solid #374151; }
+        #crosshair { display: none !important; }
+        #artwork-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { max-width: 80vw; max-height: 80vh; background-color: #fefefe; padding: 20px; border-radius: 8px; text-align: center; color: black; }
+        .modal-content img { max-width: 100%; max-height: 70vh; object-fit: contain; margin-bottom: 15px; }
+        #close-modal { position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+        
+        #landscape-warning { display: none; }
+        @media screen and (max-width: 1024px) and (orientation: portrait) {
+            #landscape-warning {
+                position: fixed;
+                inset: 0;
+                background-color: #111827;
+                z-index: 200;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+            #app-container { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <div id="blocker">
+            <div id="instructions">
+                <h1 class="text-3xl font-bold mb-4">Selamat Datang ke Galeri Digital</h1>
+                <p class="text-lg mb-4">Klik untuk masuk</p>
+                <div class="text-sm text-gray-300">
+                    <p>Guna ▲/▼ untuk bergerak ke depan/belakang</p>
+                    <p>Guna ◀/▶ untuk berpusing 90 darjah</p>
+                    <p>Klik Kanan atau 'Esc' untuk kembali dari paparan karya</p>
+                    <p class="mt-2 md:hidden">Untuk pengalaman terbaik, gunakan mod landskap.</p>
+                </div>
+            </div>
+        </div>
+
+        <button id="fullscreen-btn" class="fixed top-5 right-5 z-20 bg-gray-500 bg-opacity-50 text-white p-3 rounded-full active:bg-opacity-75 select-none" title="Skrin Penuh">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+
+        <div id="artwork-modal">
+            <span id="close-modal">&times;</span>
+            <div class="modal-content">
+                <img id="modal-img" src="" alt="Karya seni dipaparkan penuh">
+                <h2 id="modal-title" class="text-2xl font-bold"></h2>
+                <p id="modal-artist" class="text-lg text-gray-600"></p>
+            </div>
+        </div>
+
+        <div id="mobile-controls" class="fixed bottom-5 w-full flex justify-between items-end px-5 z-20 hidden">
+            <div class="flex flex-col items-center gap-4">
+                <button id="mobile-up" class="bg-gray-500 bg-opacity-50 text-white w-16 h-16 rounded-full text-2xl active:bg-opacity-75 select-none">▲</button>
+                <button id="mobile-down" class="bg-gray-500 bg-opacity-50 text-white w-16 h-16 rounded-full text-2xl active:bg-opacity-75 select-none">▼</button>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="mobile-left" class="bg-gray-500 bg-opacity-50 text-white w-16 h-16 rounded-full text-2xl active:bg-opacity-75 select-none">◀</button>
+                <button id="mobile-right" class="bg-gray-500 bg-opacity-50 text-white w-16 h-16 rounded-full text-2xl active:bg-opacity-75 select-none">▶</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="landscape-warning">
+         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white mb-4"><path d="M21.73 12a2.24 2.24 0 0 0-1-1.73l-7-4a2.23 2.23 0 0 0-2.54 0l-7 4A2.24 2.24 0 0 0 3 12v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="m2 10 10 6 10-6"/><path d="m22 12-10 6-10-6"/></svg>
+        <h2 class="text-2xl font-bold">Mod Landskap Diperlukan</h2>
+        <p class="text-lg mt-2">Sila putarkan peranti anda untuk pengalaman terbaik.</p>
+    </div>
+
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        let camera, scene, renderer;
+        const objects = []; 
+        let raycaster;
+
+        let gameActive = false; 
+
+        let currentPositionState = 1;
+        const position1 = new THREE.Vector3(0, 5, 20);
+        // DIUBAH: Kedudukan hadapan kamera diundurkan sedikit
+        const position2 = new THREE.Vector3(0, 5, -25);
+        let targetPosition = new THREE.Vector3();
+
+        let targetRotationY;
+        let isRotating = false;
+        
+        const artworks = [
+            // Panel Utama di Dinding Depan
+            { isLarge: true, title: 'Panel Utama', artist: 'RKK Pusat Bandar Kajang', position: new THREE.Vector3(0, 8, -39.9), rotation: new THREE.Vector3(0, 0, 0) },
+
+            // Dinding Kanan - 6 panel (Kedudukan Y dinaikkan)
+            { title: 'Panel 1', artist: 'Info 1', position: new THREE.Vector3(14.9, 8, 18), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 2', artist: 'Info 2', position: new THREE.Vector3(14.9, 8, 7.2), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 3', artist: 'Info 3', position: new THREE.Vector3(14.9, 8, -3.6), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 4', artist: 'Info 4', position: new THREE.Vector3(14.9, 8, -14.4), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 5', artist: 'Info 5', position: new THREE.Vector3(14.9, 8, -25.2), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 6', artist: 'Info 12', position: new THREE.Vector3(14.9, 8, -36), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+            { title: 'Panel 6', artist: 'Info 14', position: new THREE.Vector3(14.9, 8, -46.8), rotation: new THREE.Vector3(0, -Math.PI / 2, 0) },
+          
+            // Dinding Kiri - 6 panel (Kedudukan Y dinaikkan)
+            { title: 'Panel 7', artist: 'Info 6', position: new THREE.Vector3(-14.9, 8, 18), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 8', artist: 'Info 7', position: new THREE.Vector3(-14.9, 8, 7.2), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 9', artist: 'Info 8', position: new THREE.Vector3(-14.9, 8, -3.6), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 10', artist: 'Info 9', position: new THREE.Vector3(-14.9, 8, -14.4), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 11', artist: 'Info 10', position: new THREE.Vector3(-14.9, 8, -25.2), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 12', artist: 'Info 11', position: new THREE.Vector3(-14.9, 8, -36), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+            { title: 'Panel 12', artist: 'Info 13', position: new THREE.Vector3(-14.9, 8, -46.8), rotation: new THREE.Vector3(0, Math.PI / 2, 0) },
+        ];
+        
+        // Sumber imej dijana secara automatik
+        artworks.forEach((art, index) => {
+            art.img = `img/panel${index + 1}.jpg`;
+        });
+
+        const clock = new THREE.Clock();
+        init();
+        animate();
+
+        function createPatternTexture(type, size = 256) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d');
+
+            if (type === 'checkered') {
+                const squareSize = size / 2;
+                context.fillStyle = '#7f8c8d';
+                context.fillRect(0, 0, size, size);
+                context.fillStyle = '#95a5a6';
+                context.fillRect(0, 0, squareSize, squareSize);
+                context.fillRect(squareSize, squareSize, squareSize, squareSize);
+            } else if (type === 'urban') {
+                context.fillStyle = '#E0E0E0';
+                context.fillRect(0, 0, size, size);
+                context.strokeStyle = 'rgba(180,180,180,0.4)';
+                context.lineWidth = 1;
+                const thinStep = size / 10;
+                for (let i = 0; i <= size; i += thinStep) {
+                    context.beginPath(); context.moveTo(i, 0); context.lineTo(i, size); context.stroke();
+                    context.beginPath(); context.moveTo(0, i); context.lineTo(size, i); context.stroke();
+                }
+                context.strokeStyle = 'rgba(150,150,150,0.6)';
+                context.lineWidth = 2;
+                const thickStep = size / 2;
+                 for (let i = 0; i <= size; i += thickStep) {
+                    context.beginPath(); context.moveTo(i, 0); context.lineTo(i, size); context.stroke();
+                    context.beginPath(); context.moveTo(0, i); context.lineTo(size, i); context.stroke();
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            return texture;
+        }
+
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x101010);
+            scene.fog = new THREE.Fog(0x101010, 0, 90);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.copy(position1);
+            targetPosition.copy(camera.position);
+
+            camera.rotation.y = 0;
+            targetRotationY = 0;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('app-container').appendChild(renderer.domElement);
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x7f8c8d, 1.0);
+            scene.add(hemisphereLight);
+
+            setupControlsAndUI();
+            raycaster = new THREE.Raycaster();
+
+            createGalleryLayout();
+            loadArtworks();
+            
+            if ('ontouchstart' in window) {
+                setupMobileControls();
+            }
+
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('click', onDocumentClick);
+            document.addEventListener('contextmenu', onRightClick);
+        }
+        
+        function createGalleryLayout() {
+            const hallWidth = 30;
+            const hallLength = 80;
+            const wallHeight = 20;
+            
+            const floorTexture = createPatternTexture('checkered', 128);
+            floorTexture.repeat.set(hallWidth / 4, hallLength / 4);
+            const floorMaterial = new THREE.MeshLambertMaterial({ map: floorTexture });
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(hallWidth, hallLength), floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+
+            const ceilingMaterial = new THREE.MeshBasicMaterial({ color: 0xf0f0f0 });
+            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(hallWidth, hallLength), ceilingMaterial);
+            ceiling.position.y = wallHeight;
+            ceiling.rotation.x = Math.PI / 2;
+            scene.add(ceiling);
+
+            const wallTexture = createPatternTexture('urban', 256);
+            const wallMaterial = new THREE.MeshLambertMaterial({ map: wallTexture });
+
+            const sideWallGeo = new THREE.PlaneGeometry(hallLength, wallHeight);
+            const leftWall = new THREE.Mesh(sideWallGeo, wallMaterial.clone());
+            leftWall.material.map.repeat.set(hallLength / 10, wallHeight / 10);
+            leftWall.position.set(-hallWidth / 2, wallHeight / 2, 0);
+            leftWall.rotation.y = Math.PI / 2;
+            scene.add(leftWall);
+            objects.push(leftWall);
+
+            const rightWall = new THREE.Mesh(sideWallGeo, wallMaterial.clone());
+            rightWall.material.map.repeat.set(hallLength / 10, wallHeight / 10);
+            rightWall.position.set(hallWidth / 2, wallHeight / 2, 0);
+            rightWall.rotation.y = -Math.PI / 2;
+            scene.add(rightWall);
+            objects.push(rightWall);
+
+            const endWallGeo = new THREE.PlaneGeometry(hallWidth, wallHeight);
+            const frontWall = new THREE.Mesh(endWallGeo, wallMaterial.clone());
+            frontWall.material.map.repeat.set(hallWidth / 10, wallHeight / 10);
+            frontWall.position.set(0, wallHeight / 2, -hallLength / 2);
+            scene.add(frontWall);
+            objects.push(frontWall);
+            
+            const backWall = new THREE.Mesh(endWallGeo, wallMaterial.clone());
+            backWall.material.map.repeat.set(hallLength / 10, wallHeight / 10);
+            backWall.position.set(0, wallHeight / 2, hallLength / 2);
+            backWall.rotation.y = Math.PI;
+            scene.add(backWall);
+            objects.push(backWall);
+
+            const doorGeo = new THREE.PlaneGeometry(5, 10);
+            const doorMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const door = new THREE.Mesh(doorGeo, doorMat);
+            door.position.set(0, 5, hallLength / 2 - 0.1);
+            door.rotation.y = Math.PI;
+            door.userData = { isExit: true };
+            scene.add(door);
+            objects.push(door);
+        }
+
+        function setupControlsAndUI() {
+            const blocker = document.getElementById('blocker');
+            const instructions = document.getElementById('instructions');
+            
+            instructions.addEventListener('click', (event) => {
+                event.stopPropagation();
+                blocker.style.display = 'none';
+                gameActive = true;
+            }, { once: true });
+            
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', toggleFullScreen);
+            }
+
+            const onKeyDown = (event) => {
+                if (event.code === 'Escape') {
+                    if (document.getElementById('artwork-modal').style.display === 'flex') {
+                        closeModal();
+                    }
+                    return;
+                }
+
+                if (!gameActive) return; 
+                if (isRotating || camera.position.distanceTo(targetPosition) > 0.1) return;
+
+                const normalizeAngle = (angle) => (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+                const direction = normalizeAngle(targetRotationY);
+
+                const facingForward = Math.abs(direction) < 0.1 || Math.abs(direction - 2*Math.PI) < 0.1;
+                const facingBackward = Math.abs(direction - Math.PI) < 0.1;
+
+                switch (event.code) {
+                    case 'ArrowUp': case 'KeyW':
+                        if (currentPositionState === 1 && facingForward) {
+                            currentPositionState = 2;
+                            targetPosition.copy(position2);
+                        } else if (currentPositionState === 2 && facingBackward) {
+                            currentPositionState = 1;
+                            targetPosition.copy(position1);
+                        }
+                        break;
+                    case 'ArrowDown': case 'KeyS':
+                         if (currentPositionState === 2 && facingForward) {
+                            currentPositionState = 1;
+                            targetPosition.copy(position1);
+                        }
+                        break;
+                    case 'ArrowLeft': case 'KeyA':
+                        targetRotationY += Math.PI / 2;
+                        isRotating = true;
+                        break;
+                    case 'ArrowRight': case 'KeyD':
+                        targetRotationY -= Math.PI / 2;
+                        isRotating = true;
+                        break;
+                }
+            };
+            document.addEventListener('keydown', onKeyDown);
+        }
+
+        function setupMobileControls() {
+            const controls = document.getElementById('mobile-controls');
+            const up = document.getElementById('mobile-up');
+            const down = document.getElementById('mobile-down');
+            const left = document.getElementById('mobile-left');
+            const right = document.getElementById('mobile-right');
+            
+            if (controls && up && down && left && right) {
+                controls.classList.remove('hidden');
+                controls.classList.add('flex');
+
+                const handleMove = (moveType) => {
+                    if (!gameActive) return;
+                    if (isRotating || camera.position.distanceTo(targetPosition) > 0.1) return;
+                    
+                    const normalizeAngle = (angle) => (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+                    const viewDirection = normalizeAngle(targetRotationY);
+
+                    const facingForward = Math.abs(viewDirection) < 0.1 || Math.abs(viewDirection - 2*Math.PI) < 0.1;
+                    const facingBackward = Math.abs(viewDirection - Math.PI) < 0.1;
+
+                    switch (moveType) {
+                        case 'up':
+                            if (currentPositionState === 1 && facingForward) {
+                                currentPositionState = 2;
+                                targetPosition.copy(position2);
+                            } else if (currentPositionState === 2 && facingBackward) {
+                                currentPositionState = 1;
+                                targetPosition.copy(position1);
+                            }
+                            break;
+                        case 'down':
+                            if (currentPositionState === 2 && facingForward) {
+                                currentPositionState = 1;
+                                targetPosition.copy(position1);
+                            }
+                            break;
+                        case 'left':
+                            targetRotationY += Math.PI / 2;
+                            isRotating = true;
+                            break;
+                        case 'right':
+                            targetRotationY -= Math.PI / 2;
+                            isRotating = true;
+                            break;
+                    }
+                };
+
+                up.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('up'); });
+                down.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('down'); });
+                left.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('left'); });
+                right.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove('right'); });
+            }
+        }
+
+
+        function loadArtworks() {
+            const loader = new THREE.TextureLoader();
+            artworks.forEach(art => {
+                // Saiz panel ditentukan secara dinamik
+                const artGeo = art.isLarge
+                    ? new THREE.PlaneGeometry(28, 14)       // Saiz untuk panel besar
+                    : new THREE.PlaneGeometry(5, 12);       // Nisbah 5:12
+
+                const artMat = new THREE.MeshLambertMaterial({ 
+                    map: loader.load(art.img, (texture) => {
+                        // Pastikan tekstur panel sisi tidak herot
+                        if (!art.isLarge) {
+                            texture.repeat.set(1, 1);
+                        }
+                    }),
+                    color: 0xffffff
+                });
+
+                const artworkMesh = new THREE.Mesh(artGeo, artMat);
+                
+                artworkMesh.position.copy(art.position);
+                artworkMesh.rotation.set(art.rotation.x, art.rotation.y, art.rotation.z);
+                
+                artworkMesh.userData = { isArtwork: true, ...art }; 
+                scene.add(artworkMesh);
+                objects.push(artworkMesh);
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onDocumentClick(event) {
+            if (!gameActive) return;
+            
+            const touch = event.touches ? event.touches[0] : event;
+
+            const mouse = new THREE.Vector2();
+            mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(objects, false);
+
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                if (obj.userData.isArtwork) {
+                    showArtworkModal(obj.userData);
+                } else if (obj.userData.isExit) {
+                    exitGallery();
+                }
+            }
+        }
+
+        function onRightClick(event) {
+            event.preventDefault();
+            if (document.getElementById('artwork-modal').style.display === 'flex') {
+                closeModal();
+            }
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+        
+        function exitGallery() {
+            const blocker = document.getElementById('blocker');
+            const instructions = document.getElementById('instructions');
+
+            blocker.style.display = 'flex';
+            gameActive = false;
+            
+            camera.position.copy(position1);
+            targetPosition.copy(position1);
+            currentPositionState = 1;
+            camera.rotation.y = 0;
+            targetRotationY = 0;
+
+            const newInstructions = instructions.cloneNode(true);
+            instructions.parentNode.replaceChild(newInstructions, instructions);
+
+            newInstructions.addEventListener('click', (event) => {
+                 event.stopPropagation();
+                 newInstructions.parentElement.style.display = 'none';
+                 gameActive = true;
+            }, { once: true });
+        }
+        
+        function showArtworkModal(data) {
+            gameActive = false;
+            document.getElementById('modal-img').src = data.img;
+            document.getElementById('modal-title').textContent = data.title;
+            document.getElementById('modal-artist').textContent = data.artist;
+            document.getElementById('artwork-modal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('artwork-modal').style.display = 'none';
+            gameActive = true;
+        }
+
+        document.getElementById('close-modal').addEventListener('click', (event) => {
+            event.stopPropagation();
+            closeModal();
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (gameActive) {
+                if(camera.position.distanceTo(targetPosition) > 0.01) {
+                    camera.position.lerp(targetPosition, 0.05);
+                }
+                if (isRotating) {
+                    camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, targetRotationY, 0.1);
+                    if (Math.abs(camera.rotation.y - targetRotationY) < 0.01) {
+                        camera.rotation.y = targetRotationY;
+                        isRotating = false;
+                    }
+                }
+            }
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
