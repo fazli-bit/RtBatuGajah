@@ -404,7 +404,7 @@
                 const sheetToTurn = this.sheets[sheetIndex];
                 const startAngle = sheetToTurn.rotation.y;
                 const endAngle = isForward ? -Math.PI : 0;
-                const targetZ = isForward ? sheetIndex * this.PAGE_THICKNESS - 0.048 : -sheetIndex * this.PAGE_THICKNESS;
+                const targetZ = isForward ? sheetIndex * this.PAGE_THICKNESS - 0.098 : -sheetIndex * this.PAGE_THICKNESS;
                 const animationProxy = { angle: startAngle, z: sheetToTurn.position.z };
 
                 new TWEEN.Tween(animationProxy)
